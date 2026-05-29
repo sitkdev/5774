@@ -1,0 +1,3 @@
+-obfuscationdictionary build/obfuscation-dictionary.txt
+-classobfuscationdictionary build/class-dictionary.txt
+-packageobfuscationdictionary build/package-dictionary.txt

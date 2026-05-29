@@ -1,0 +1,43 @@
+-obfuscationdictionary build/tmp/dictionary/field_obfuscation_dictionary.txt
+-classobfuscationdictionary build/tmp/dictionary/class_obfuscation_dictionary.txt
+-packageobfuscationdictionary build/tmp/dictionary/package_obfuscation_dictionary.txt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

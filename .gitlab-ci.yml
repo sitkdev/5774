@@ -1,0 +1,4 @@
+  include:
+    - project: android/teams/android-ci-policy
+      file: android-ci.yml
+      ref: $ANDROID_CI_REF

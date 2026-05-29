@@ -1,0 +1,97 @@
+workflows:
+  ios_kmp_release:
+    name: iOS KMP Release
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+
+    environment:
+      xcode: latest
+      vars:
+        XCODE_PROJECT: "iosApp/iosApp.xcodeproj"
+        XCODE_SCHEME: "iosApp"
+        GRADLE_OPTS: "-Xmx4g -Dorg.gradle.jvmargs='-Xmx4g -XX:MaxMetaspaceSize=512m'"
+      groups:
+        - "9999"
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: $APP_IDENTIFIER
+
+    scripts:
+      - name: Make gradlew executable
+        script: |
+          chmod +x gradlew
+
+      - name: Show versions
+        script: |
+          xcodebuild -version
+          ruby --version
+          java -version
+          ./gradlew -v
+
+      - name: Set build number
+        script: |
+          cd "$CM_BUILD_DIR/iosApp"
+          agvtool new-version -all "$PROJECT_BUILD_NUMBER"
+
+      - name: Set up code signing
+        script: |
+          xcode-project use-profiles --verbose
+
+      - name: Build signed IPA
+        script: |
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
+        submit_to_app_store: false
+
+  upload_ios_metadata:
+    name: Upload iOS metadata
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+
+    environment:
+      xcode: 16.2
+      groups:
+        - "9999"
+
+    scripts:
+      - name: Install Ruby dependencies
+        script: |
+          cd iosApp
+          bundle install
+
+      - name: Install Python dependency
+        script: |
+          python3 -m pip install --user requests
+
+      - name: Generate fastlane metadata from Google Sheet
+        script: |
+          cd "$CM_BUILD_DIR"
+          python3 iosApp/scripts/import_fastlane_metadata_from_gsheet.py
+
+      - name: Validate generated metadata
+        script: |
+          cd iosApp
+          ls fastlane/metadata
+          ls fastlane/metadata/en-CA
+
+      - name: Upload metadata to App Store Connect
+        script: |
+          cd iosApp
+          bundle exec fastlane ios upload_metadata
+
+    artifacts:
+      - iosApp/fastlane/logs/**/*

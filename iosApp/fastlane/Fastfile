@@ -1,0 +1,41 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Upload App Store metadata only"
+  lane :upload_metadata do
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_KEY_IDENTIFIER"],
+      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+      key_content: ENV["APP_STORE_CONNECT_PRIVATE_KEY"],
+      is_key_content_base64: false
+    )
+
+    opts = {
+      api_key: api_key,
+      force: true,
+      skip_binary_upload: true,
+      skip_screenshots: false,
+      skip_metadata: false,
+      overwrite_screenshots: true,
+      automatic_release: true,
+      submit_for_review: false,
+      run_precheck_before_submit: false,
+      metadata_path: "./fastlane/metadata",
+      copyright: ENV["APP_COPYRIGHT"],
+      primary_category: ENV["APP_PRIMARY_CATEGORY"],
+      app_rating_config_path: "./fastlane/itc_app_rating_config.json",
+      app_review_information: {
+        first_name: "Ivan",
+        last_name: "Ivanenko",
+        phone_number: "+380999999999",
+        email_address: "ivan.ivanenko@gmail.com",
+        notes: "No special review instructions."
+      }
+    }
+
+    secondary = ENV["APP_SECONDARY_CATEGORY"]
+    opts[:secondary_category] = secondary if secondary && !secondary.empty?
+
+    deliver(opts)
+  end
+end
