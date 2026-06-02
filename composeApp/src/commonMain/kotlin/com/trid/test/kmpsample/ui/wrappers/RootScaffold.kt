@@ -1,0 +1,54 @@
+package com.trid.test.kmpsample.ui.wrappers
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+
+@Composable
+fun RootScaffold(
+    modifier: Modifier = Modifier,
+    topBar: @Composable () -> Unit = {},
+    bottomBar: @Composable () -> Unit = {},
+    background: Brush,
+    content: @Composable (PaddingValues) -> Unit,
+) {
+    val softwareKeyboard = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+
+    Box(
+        modifier = Modifier
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() },
+                onClick = {
+                    softwareKeyboard?.hide()
+                    focusManager.clearFocus()
+                }
+            )
+            .fillMaxSize().background(background)) {
+        Scaffold(
+            modifier = modifier.fillMaxSize().imePadding(),
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onBackground,
+            topBar = topBar,
+            bottomBar = bottomBar,
+            contentWindowInsets = WindowInsets.safeDrawing,
+            content = content,
+        )
+    }
+}

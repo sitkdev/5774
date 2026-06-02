@@ -29,7 +29,7 @@
             android:launchMode="singleTask"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize"
-            android:name=".MainActivity">
+            android:name="com.trid.test.kmpsample.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

@@ -75,7 +75,7 @@ private fun NoConnectionUi(
 ) {
     BackHandler(enabled = true) { /* locked: ignore back press */ }
     NoConnectionScreenContent(
-        onReconnect = { state.eventSink(NoConnectionUiEvent.Retry) },
+        onReconnect = { /*state.eventSink(NoConnectionUiEvent.Retry)*/ },
     )
 }
 

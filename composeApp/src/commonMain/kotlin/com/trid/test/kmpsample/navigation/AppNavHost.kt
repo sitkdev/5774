@@ -1,12 +1,16 @@
 package com.trid.test.kmpsample.navigation
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import com.slack.circuit.backstack.rememberSaveableBackStack
 import com.slack.circuit.foundation.CircuitCompositionLocals
 import com.slack.circuit.foundation.NavigableCircuitContent
 import com.slack.circuit.foundation.rememberCircuitNavigator
+import com.trid.test.kmpsample.ui.theme.AppGradients
+import com.trid.test.kmpsample.ui.wrappers.RootScaffold
 
 /**
  * The app's navigation host.
@@ -44,10 +48,15 @@ fun AppNavHost() {
 
     CircuitCompositionLocals(circuit) {
         CompositionLocalProvider(LocalGuardedNavigator provides guardedNavigator) {
-            NavigableCircuitContent(
-                navigator = guardedNavigator,
-                backStack = backStack,
-            )
+            RootScaffold(
+                background = AppGradients.Primary
+            ){ paddingValues ->
+                NavigableCircuitContent(
+                    modifier = Modifier.padding(paddingValues),
+                    navigator = guardedNavigator,
+                    backStack = backStack,
+                )
+            }
         }
     }
 }
