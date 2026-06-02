@@ -1,13 +1,12 @@
 package com.trid.test.kmpsample
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
+import com.trid.test.kmpsample.navigation.AppNavHost
+import com.trid.test.kmpsample.ui.theme.AppTheme
 
 @Composable
-@Preview
 fun App() {
-    MaterialTheme {
-
+    AppTheme {
+        AppNavHost()
     }
 }

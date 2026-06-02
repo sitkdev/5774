@@ -18,6 +18,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    id("org.jetbrains.kotlin.plugin.parcelize")
     id("stringfog")
     id("sq.res-guard")
     id("io.github.valacuz.proguard-dictionary-generator")
@@ -99,6 +100,17 @@ kotlin {
     androidTarget {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
+            // Teach the kotlin-parcelize compiler plugin to treat our
+            // multiplatform-safe @CommonParcelize annotation (which actual-aliases
+            // to @kotlinx.parcelize.Parcelize on Android) as a Parcelize trigger,
+            // so Circuit Screen `data object`s get a generated Parcelable impl.
+            freeCompilerArgs.add(
+                "-P",
+            )
+            freeCompilerArgs.add(
+                "plugin:org.jetbrains.kotlin.parcelize:additionalAnnotation=" +
+                    "com.trid.test.kmpsample.navigation.CommonParcelize",
+            )
         }
     }
 
@@ -111,7 +123,6 @@ kotlin {
             isStatic = true
         }
     }
-
     sourceSets {
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
@@ -121,13 +132,41 @@ kotlin {
             implementation(libs.firebase.analytics)
             implementation(libs.firebase.crashlytics)
             implementation(libs.firebase.messaging)
+
+            implementation(libs.core.splashscreen)
+
+            implementation(libs.koin.android)
+
+            implementation(libs.ktor.client.okhttp)
+        }
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
         }
         commonMain.dependencies {
+            implementation(libs.kermit)
+
+            implementation(libs.koin.core)
+            implementation(libs.koin.compose)
+            implementation(libs.koin.compose.viewmodel)
+
+            implementation(libs.multiplatform.settings)
+            implementation(libs.multiplatform.settings.coroutines)
+            implementation(libs.multiplatform.settings.no.arg)
+
+            implementation(libs.circuit)
+
+            implementation(libs.ktor.client.core)
+
+            implementation(libs.kotlinx.serialization.core)
+            implementation(libs.kotlinx.serialization.json)
+
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
             implementation(libs.compose.ui)
             implementation(libs.compose.components.resources)
+            implementation(libs.compose.ui.backhandler)
+            implementation(libs.coil.compose)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.kotlinx.coroutines.core)
