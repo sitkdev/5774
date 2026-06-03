@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
@@ -46,6 +47,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.trid.test.kmpsample.data.Collection
 import com.trid.test.kmpsample.data.Rarity
@@ -63,7 +66,7 @@ private val CATEGORIES = listOf("Coins", "Minerals", "Books", "Figurines", "Card
 /**
  * Add-artifact form showcasing Material3 inputs: OutlinedTextFields, two
  * ExposedDropdownMenuBox dropdowns (collection + category), a condition Slider,
- * a value Slider, a favorite Switch, a rarity RadioButton group and a
+ * decimal value input, a favorite Switch, a rarity RadioButton group and a
  * DatePicker dialog. Camera/Gallery buttons keep picked images in memory for
  * preview; the presenter writes them to app-private files on save.
  */
@@ -88,7 +91,7 @@ fun AddArtifactScreenUi(
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var storage by remember { mutableStateOf("") }
-    var value by remember { mutableStateOf(0f) }
+    var valueText by remember { mutableStateOf("") }
     var condition by remember { mutableStateOf(80f) }
     var favorite by remember { mutableStateOf(false) }
     var rarity by remember { mutableStateOf(Rarity.Common) }
@@ -106,8 +109,11 @@ fun AddArtifactScreenUi(
     var showDatePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState()
     val dateMillis = datePickerState.selectedDateMillis
+    val parsedValue = remember(valueText) { parseArtifactValue(valueText) }
 
-    val canSave = name.isNotBlank() && (selectedCollection != null || newCollectionName.isNotBlank())
+    val canSave = name.isNotBlank() &&
+        (selectedCollection != null || newCollectionName.isNotBlank()) &&
+        parsedValue != null
 
     Column(modifier = modifier.fillMaxSize()) {
         TopAppBar(
@@ -224,20 +230,26 @@ fun AddArtifactScreenUi(
                 )
             }
 
-            // Value: text field + slider for quick set.
             item {
-                Column {
-                    Text(
-                        "Value: ${value.toInt()}",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                    Slider(
-                        value = value,
-                        onValueChange = { value = it },
-                        valueRange = 0f..10000f,
-                    )
-                }
+                OutlinedTextField(
+                    value = valueText,
+                    onValueChange = { valueText = normalizeDecimalInput(it) },
+                    label = { Text("Value") },
+                    supportingText = {
+                        if (parsedValue == null) {
+                            Text("Enter a valid decimal value")
+                        } else {
+                            Text("Use digits and up to 2 decimal places")
+                        }
+                    },
+                    isError = parsedValue == null,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Decimal,
+                        imeAction = ImeAction.Next,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
             item {
@@ -331,7 +343,7 @@ fun AddArtifactScreenUi(
                                 category = category,
                                 rarity = rarity,
                                 condition = condition.toInt(),
-                                value = value.toDouble(),
+                                value = parsedValue ?: 0.0,
                                 storageLocation = storage,
                                 imageBytes = images.toList(),
                                 favorite = favorite,
@@ -461,6 +473,33 @@ private fun CategoryDropdown(
     }
 }
 
+private fun normalizeDecimalInput(raw: String): String {
+    val result = StringBuilder()
+    var separatorSeen = false
+    var decimals = 0
+    raw.forEach { char ->
+        when {
+            char.isDigit() && !separatorSeen -> result.append(char)
+            char.isDigit() && decimals < 2 -> {
+                result.append(char)
+                decimals++
+            }
+            (char == '.' || char == ',') && !separatorSeen -> {
+                result.append('.')
+                separatorSeen = true
+            }
+        }
+    }
+    return result.toString()
+}
+
+private fun parseArtifactValue(input: String): Double? {
+    val normalized = input.trim().replace(',', '.')
+    if (normalized.isBlank()) return 0.0
+    if (normalized == ".") return null
+    return normalized.toDoubleOrNull()
+}
+
 @Composable
 private fun ImagePreviewRow(images: List<ByteArray>) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -492,7 +531,7 @@ private fun ImagePreviewRow(images: List<ByteArray>) {
                     AsyncImage(
                         model = images[index],
                         contentDescription = null,
-                        modifier = Modifier.size(80.dp),
+                        modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                     )
                 }

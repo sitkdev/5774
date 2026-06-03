@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -40,10 +42,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.trid.test.kmpsample.data.Artifact
+import com.trid.test.kmpsample.data.ArtifactImage
 import com.trid.test.kmpsample.data.Rarity
 import com.trid.test.kmpsample.navigation.ArtifactDetailsUiEvent
 import com.trid.test.kmpsample.navigation.ArtifactDetailsUiState
@@ -74,6 +78,13 @@ fun ArtifactDetailsScreenUi(
     val artifact = state.artifact
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showPhotoDialog by remember { mutableStateOf(false) }
+    var selectedImageIndex by remember(artifact?.id) { mutableStateOf(0) }
+    val images = artifact?.images.orEmpty()
+    val safeImageIndex = selectedImageIndex.coerceIn(
+        minimumValue = 0,
+        maximumValue = (images.size - 1).coerceAtLeast(0),
+    )
+    val selectedImage = images.getOrNull(safeImageIndex)
 
     Column(modifier = modifier.fillMaxSize()) {
         TopAppBar(
@@ -128,6 +139,8 @@ fun ArtifactDetailsScreenUi(
             item {
                 PhotoArea(
                     artifact = artifact,
+                    selectedImageIndex = safeImageIndex,
+                    onSelectedImageIndexChange = { selectedImageIndex = it },
                     onClick = { showPhotoDialog = true },
                 )
             }
@@ -215,8 +228,9 @@ fun ArtifactDetailsScreenUi(
                 contentAlignment = Alignment.Center,
             ) {
                 ArtifactThumb(
-                    image = artifact.images.firstOrNull(),
+                    image = selectedImage,
                     modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+                    contentScale = ContentScale.Fit,
                 )
             }
         }
@@ -224,30 +238,76 @@ fun ArtifactDetailsScreenUi(
 }
 
 @Composable
-private fun PhotoArea(artifact: Artifact, onClick: () -> Unit) {
+private fun PhotoArea(
+    artifact: Artifact,
+    selectedImageIndex: Int,
+    onSelectedImageIndexChange: (Int) -> Unit,
+    onClick: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1.4f)
+                .clip(RoundedCornerShape(24.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            ArtifactThumb(
+                image = artifact.images.getOrNull(selectedImageIndex),
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+            // Corner seal/badge stamp accent.
+            Image(
+                painter = painterResource(
+                    if (artifact.favorite) Res.drawable.ic_seal else Res.drawable.ic_badge,
+                ),
+                contentDescription = null,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(12.dp)
+                    .size(44.dp),
+            )
+        }
+
+        if (artifact.images.size > 1) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                itemsIndexed(artifact.images) { index, image ->
+                    PhotoThumbnail(
+                        image = image,
+                        selected = index == selectedImageIndex,
+                        onClick = { onSelectedImageIndexChange(index) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PhotoThumbnail(
+    image: ArtifactImage,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(1.4f)
-            .clip(RoundedCornerShape(24.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .clickable(onClick = onClick),
+            .size(64.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(
+                if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.32f)
+                else MaterialTheme.colorScheme.surfaceContainerHigh,
+            )
+            .clickable(onClick = onClick)
+            .padding(if (selected) 3.dp else 0.dp),
         contentAlignment = Alignment.Center,
     ) {
         ArtifactThumb(
-            image = artifact.images.firstOrNull(),
-            modifier = Modifier.fillMaxWidth(0.5f).aspectRatio(1f),
-        )
-        // Corner seal/badge stamp accent.
-        Image(
-            painter = painterResource(
-                if (artifact.favorite) Res.drawable.ic_seal else Res.drawable.ic_badge,
-            ),
-            contentDescription = null,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(12.dp)
-                .size(44.dp),
+            image = image,
+            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
+            contentScale = ContentScale.Crop,
         )
     }
 }
