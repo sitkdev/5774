@@ -8,5 +8,16 @@
 	<string>Change this text about cam persmission</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Change this text about lib permission</string>
+    <key>UILaunchScreen</key>
+    <dict>
+        <key>UIColorName</key>
+        <string>LaunchBackground</string>
+        <key>UIImageRespectsSafeAreaInsets</key>
+        <true/>
+    </dict>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+    </array>
 </dict>
 </plist>

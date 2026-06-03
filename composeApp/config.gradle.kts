@@ -1,5 +1,5 @@
 extra["app_name"] = "CHANGE NAME"
-extra["bundle"] = "com.test.bundle"
+extra["bundle"] = "com.choicehotels.andr"
 
 extra["isMinifyEnabled"] = true
 extra["isShrinkResources"] = true

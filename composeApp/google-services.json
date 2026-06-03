@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "418835177502",
+    "project_id": "collectra-d37dc",
+    "storage_bucket": "collectra-d37dc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:418835177502:android:139a43972459626e76ce0f",
+        "android_client_info": {
+          "package_name": "com.choicehotels.andr"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDDO2QgYHNF9BV8iMc4k2cM4aW5tdAD9lM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

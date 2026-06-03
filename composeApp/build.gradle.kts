@@ -23,6 +23,9 @@ plugins {
     id("sq.res-guard")
     id("io.github.valacuz.proguard-dictionary-generator")
     id("ru.cleverpumpkin.proguard-dictionaries-generator")
+
+    id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 }
 
 val appName = rootProject.extra["app_name"] as String
