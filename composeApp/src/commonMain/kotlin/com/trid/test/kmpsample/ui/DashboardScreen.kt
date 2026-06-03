@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -89,11 +90,16 @@ fun DashboardScreenUi(
         item { SectionHeader(title = "Recently added") }
         item {
             if (recent.isEmpty()) {
-                EmptyState(
-                    title = "No artifacts yet",
-                    subtitle = "Add your first piece to start your collection.",
-                    iconSize = 72.dp,
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    EmptyState(
+                        title = "No artifacts yet",
+                        subtitle = "Add your first item and create a collection while saving it.",
+                        iconSize = 72.dp,
+                    )
+                    Button(onClick = { state.eventSink(DashboardUiEvent.OpenAddArtifact) }) {
+                        Text("Add first item")
+                    }
+                }
             } else {
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -143,12 +149,12 @@ private fun HeroHeader() {
             Spacer(Modifier.width(16.dp))
             Column {
                 Text(
-                    text = "Collectra",
+                    text = "My collection",
                     style = MaterialTheme.typography.displaySmall,
                     color = MaterialTheme.colorScheme.onPrimary,
                 )
                 Text(
-                    text = "Your treasure vault",
+                    text = "Your personal catalog",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
                 )

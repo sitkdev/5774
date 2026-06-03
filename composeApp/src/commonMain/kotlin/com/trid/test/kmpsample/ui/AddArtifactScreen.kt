@@ -24,7 +24,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -48,7 +47,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import com.trid.test.kmpsample.data.Artifact
 import com.trid.test.kmpsample.data.ArtifactImage
 import com.trid.test.kmpsample.data.Collection
 import com.trid.test.kmpsample.data.Rarity
@@ -57,6 +55,7 @@ import com.trid.test.kmpsample.media.rememberGalleryPicker
 import com.trid.test.kmpsample.navigation.AddArtifactUiEvent
 import com.trid.test.kmpsample.navigation.AddArtifactUiState
 import com.trid.test.kmpsample.ui.components.ArtifactThumb
+import com.trid.test.kmpsample.ui.components.NavBackIcon
 import com.trid.test.kmpsample.ui.components.RarityChip
 import com.trid.test.kmpsample.ui.components.accentColor
 import kotlin.io.encoding.Base64
@@ -68,7 +67,7 @@ private val CATEGORIES = listOf("Coins", "Minerals", "Books", "Figurines", "Card
  * Add-artifact form showcasing Material3 inputs: OutlinedTextFields, two
  * ExposedDropdownMenuBox dropdowns (collection + category), a condition Slider,
  * a value Slider, a favorite Switch, a rarity RadioButton group and a
- * DatePicker dialog. Camera/Gallery buttons are TODO seams for the media agent.
+ * DatePicker dialog. Camera/Gallery buttons attach user images as encrypted data.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalEncodingApi::class)
 @Composable
@@ -95,7 +94,13 @@ fun AddArtifactScreenUi(
     var condition by remember { mutableStateOf(80f) }
     var favorite by remember { mutableStateOf(false) }
     var rarity by remember { mutableStateOf(Rarity.Common) }
-    var selectedCollection by remember(collections) { mutableStateOf(collections.firstOrNull()) }
+    var selectedCollection by remember(collections, state.preselectedCollectionId) {
+        mutableStateOf(
+            collections.firstOrNull { it.id == state.preselectedCollectionId }
+                ?: collections.firstOrNull(),
+        )
+    }
+    var newCollectionName by remember { mutableStateOf("") }
     var category by remember { mutableStateOf(CATEGORIES.first()) }
 
     var collectionExpanded by remember { mutableStateOf(false) }
@@ -104,21 +109,16 @@ fun AddArtifactScreenUi(
     val datePickerState = rememberDatePickerState()
     val dateMillis = datePickerState.selectedDateMillis
 
-    val canSave = name.isNotBlank() && selectedCollection != null
+    val canSave = name.isNotBlank() && (selectedCollection != null || newCollectionName.isNotBlank())
 
     Column(modifier = modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text("Add artifact", style = MaterialTheme.typography.titleLarge) },
             navigationIcon = {
-                IconButton(
+                NavBackIcon(
                     onClick = { state.eventSink(AddArtifactUiEvent.Cancel) },
-                ) {
-                    Text(
-                        "←",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
+                    modifier = Modifier.padding(start = 4.dp),
+                )
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Color.Transparent,
@@ -170,18 +170,37 @@ fun AddArtifactScreenUi(
                 )
             }
 
-            // Collection dropdown.
             item {
-                CollectionDropdown(
-                    collections = collections,
-                    selected = selectedCollection,
-                    expanded = collectionExpanded,
-                    onExpandedChange = { collectionExpanded = it },
-                    onSelect = {
-                        selectedCollection = it
-                        collectionExpanded = false
-                    },
-                )
+                if (collections.isEmpty()) {
+                    NewCollectionField(
+                        value = newCollectionName,
+                        onValueChange = { newCollectionName = it },
+                        label = "Collection name",
+                        supportingText = "Create your first collection to save this artifact.",
+                    )
+                } else {
+                    CollectionDropdown(
+                        collections = collections,
+                        selected = selectedCollection,
+                        expanded = collectionExpanded,
+                        onExpandedChange = { collectionExpanded = it },
+                        onSelect = {
+                            selectedCollection = it
+                            collectionExpanded = false
+                        },
+                    )
+                }
+            }
+
+            if (collections.isNotEmpty()) {
+                item {
+                    NewCollectionField(
+                        value = newCollectionName,
+                        onValueChange = { newCollectionName = it },
+                        label = "New collection (optional)",
+                        supportingText = "Fill this to save into a new collection instead.",
+                    )
+                }
             }
 
             // Category dropdown.
@@ -305,30 +324,20 @@ fun AddArtifactScreenUi(
             item {
                 Button(
                     onClick = {
-                        val target = selectedCollection ?: return@Button
-                        val artifactImages: List<ArtifactImage> =
-                            if (images.isEmpty()) {
-                                listOf(ArtifactImage.Resource(target.iconKey))
-                            } else {
-                                images.toList()
-                            }
                         state.eventSink(
                             AddArtifactUiEvent.Save(
-                                Artifact(
-                                    id = "art-${name.hashCode()}-${dateMillis ?: 0L}",
-                                    collectionId = target.id,
-                                    name = name.trim(),
-                                    description = description.trim(),
-                                    category = category,
-                                    rarity = rarity,
-                                    condition = condition.toInt(),
-                                    value = value.toDouble(),
-                                    storageLocation = storage.trim().ifBlank { "Unsorted" },
-                                    tags = emptyList(),
-                                    images = artifactImages,
-                                    favorite = favorite,
-                                    dateAddedMillis = dateMillis ?: 0L,
-                                ),
+                                name = name,
+                                description = description,
+                                selectedCollectionId = selectedCollection?.id,
+                                newCollectionName = newCollectionName,
+                                category = category,
+                                rarity = rarity,
+                                condition = condition.toInt(),
+                                value = value.toDouble(),
+                                storageLocation = storage,
+                                images = images.toList(),
+                                favorite = favorite,
+                                dateAddedMillis = dateMillis ?: 0L,
                             ),
                         )
                     },
@@ -362,6 +371,23 @@ fun AddArtifactScreenUi(
             DatePicker(state = datePickerState)
         }
     }
+}
+
+@Composable
+private fun NewCollectionField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    supportingText: String,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        supportingText = { Text(supportingText) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

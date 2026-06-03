@@ -57,9 +57,9 @@ data class CollectionArtifactsScreen(val collectionId: String) : Screen
 @CommonParcelize
 data class ArtifactDetailsScreen(val artifactId: String) : Screen
 
-/** Form for adding a new artifact. */
+/** Form for adding a new artifact; optionally preselects a source collection. */
 @CommonParcelize
-data object AddArtifactScreen : Screen
+data class AddArtifactScreen(val collectionId: String? = null) : Screen
 
 /** Curated cross-collection showcase (favorites / highlights). */
 @CommonParcelize

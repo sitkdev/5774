@@ -43,7 +43,7 @@ enum class Rarity {
  *  - [Resource]: a bundled drawable referenced by its generated-accessor [name]
  *    (e.g. `"ic_coins"`); resolve with [resolveDrawable].
  *  - [Bytes]: user-supplied image bytes, base64-encoded for JSON persistence
- *    (populated later by the media-wiring agent from the gallery/camera picker).
+ *    (created from the gallery/camera picker).
  */
 @Serializable
 sealed interface ArtifactImage {
@@ -99,11 +99,11 @@ data class DashboardStats(
  * Maps the string drawable keys stored in models to the generated
  * [DrawableResource] accessors. Keeping the lookup here (rather than scattering
  * `Res.drawable.*` references through the UI) means the UI agent resolves any
- * key — bundled or seeded — through one function.
+ * key through one function.
  */
 object DrawableKeys {
 
-    /** All keys the seed data may reference, plus extras the UI can offer when adding. */
+    /** All bundled drawable keys user-created models may reference. */
     val all: Map<String, DrawableResource> = mapOf(
         "ic_coins" to Res.drawable.ic_coins,
         "ic_capsule" to Res.drawable.ic_capsule,
@@ -127,8 +127,8 @@ object DrawableKeys {
 
 /**
  * Resolves an [ArtifactImage.Resource] name to a [DrawableResource].
- * For [ArtifactImage.Bytes] callers should decode the base64 separately (the
- * media agent owns that path); this helper covers only bundled resources.
+ * For [ArtifactImage.Bytes] callers should decode the base64 separately; this
+ * helper covers only bundled resources.
  */
 fun ArtifactImage.Resource.resolveDrawable(): DrawableResource =
     DrawableKeys.resolve(name)

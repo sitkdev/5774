@@ -16,10 +16,10 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -36,6 +36,7 @@ import com.trid.test.kmpsample.navigation.CollectionArtifactsUiEvent
 import com.trid.test.kmpsample.navigation.CollectionArtifactsUiState
 import com.trid.test.kmpsample.ui.components.ArtifactThumb
 import com.trid.test.kmpsample.ui.components.EmptyState
+import com.trid.test.kmpsample.ui.components.NavBackIcon
 import com.trid.test.kmpsample.ui.components.RarityChip
 import com.trid.test.kmpsample.ui.components.formatCurrency
 
@@ -60,13 +61,10 @@ fun CollectionArtifactsScreenUi(
                 )
             },
             navigationIcon = {
-                IconButton(onClick = { state.eventSink(CollectionArtifactsUiEvent.Back) }) {
-                    Text(
-                        text = "←",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
+                NavBackIcon(
+                    onClick = { state.eventSink(CollectionArtifactsUiEvent.Back) },
+                    modifier = Modifier.padding(start = 4.dp),
+                )
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Color.Transparent,
@@ -77,10 +75,15 @@ fun CollectionArtifactsScreenUi(
 
         if (state.artifacts.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                EmptyState(
-                    title = "Nothing here yet",
-                    subtitle = "Add artifacts to this collection to see them here.",
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    EmptyState(
+                        title = "Nothing here yet",
+                        subtitle = "Add artifacts to this collection to see them here.",
+                    )
+                    Button(onClick = { state.eventSink(CollectionArtifactsUiEvent.OpenAddArtifact) }) {
+                        Text("Add artifact")
+                    }
+                }
             }
         } else {
             LazyVerticalGrid(

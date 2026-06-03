@@ -1,0 +1,3307 @@
+ ▐▛███▜▌   Claude Code v2.1.161
+▝▜█████▛▘  Opus 4.8 · Claude Team
+  ▘▘ ▝▝    ~/AndroidStudioProjects/Work/5773
+
+   Opus 4.8 is here! Now defaults to high effort · /effort xhigh for your hardest tasks
+  ⎿  SessionStart:startup says: # claude-mem status
+
+     This project has no memory yet. The current session will seed it; subsequent sessions will receive auto-injected context for relevant past work.
+
+     Memory injection starts on your second session in a project.
+
+     `/learn-codebase` is available if the user wants to front-load the entire repo into memory in a single pass (~5 minutes on a typical repo, optional). Otherwise memory builds passively as work happens.
+
+     Live activity: http://localhost:37777
+     How it works: `/how-it-works`
+
+     This message disappears once the first observation lands.
+
+     View Observations Live @ http://localhost:37777
+
+❯ /init                                                                         
+
+● I'll analyze this codebase to create a CLAUDE.md file. Let me explore the
+  structure.
+
+  Searched for 1 pattern, read 3 files (ctrl+o to expand)
+
+● Let me look at the source code structure and key config files.
+
+  Searched for 1 pattern, read 3 files (ctrl+o to expand)
+
+● Let me read the app source and the publishing tooling, which appears
+  substantial.
+
+  Read 4 files (ctrl+o to expand)
+
+● Let me check the CI configs and the publish flow orchestrator.
+
+  Read 6 files (ctrl+o to expand)
+
+● Write(CLAUDE.md)
+  ⎿  Wrote 104 lines to CLAUDE.md
+       2 # CLAUDE.md
+       3 This file provides guidance to Claude Code (claude.ai/code) when
+       4  working with code in this repository.
+       5 ## What this is
+       7 A Kotlin Multiplatform (Android + iOS) Compose Multiplatform **a
+         pp template**. The
+         t` is a barein `composeApp/` is intentionally near-empty (`App.k
+       9 `MaterialTheme {}`) — the repo's real value is the **build/obfus
+      10 the **Python iOS App Store publishing pipeline** (`scripts/publi
+         sh/`) that turn this
+     … +146 lines (ctrl+o to expand)
+
+● Created CLAUDE.md. Summary of what I documented:
+
+  The key insight — this is a near-empty KMP/Compose template; the real
+  substance is two systems future instances must understand before editing:
+
+  1. Obfuscation machinery (composeApp/build.gradle.kts): a setup.txt file is
+  auto-generated with three randomized-then-persisted values controlling
+  resource (sq.res-guard), string (stringfog), and code (valacuz/CleverPumpkin
+  ProGuard dict) obfuscation. Plus custom rebundle / removeProguardMap tasks.
+  Deleting setup.txt re-rolls the profile.
+  2. iOS publishing pipeline (scripts/publish/, python -m scripts.publish):
+  orchestrates Jira → file edits → GitHub production push → Codemagic builds →
+  Claude-generated App Store copy → Google Sheets translation → App Store
+  Connect. Driven off the project dir's leading digits as the ticket number,
+  with secrets in a sibling ../Utils/ folder.
+
+  I also captured: per-app identity lives in config.gradle.kts via
+  rootProject.extra (template placeholders "CHANGE NAME" / com.test.bundle);
+  stack is Koin + Circuit + Ktor + multiplatform-settings + Coil + Kermit;
+  build/run commands; and gotchas (SDK-level discrepancy resolved in favor of
+  config.gradle.kts=28, daemon disabled, dir name is load-bearing, no test
+  source set).
+
+  One thing worth confirming: there's no existing CLAUDE.md, Cursor, or Copilot
+  rules to merge — this is a fresh file.
+
+✻ Brewed for 1m 29s
+
+❯ @"android-ui-composer (agent)" создай цветовую схему для темы  приложения на  
+  основе такой палитры: Material 3 Dark Theme                                   
+  Primary                                                                       
+  val Primary = Color(0xFFD4AF37)      // Ancient Gold                          
+  val OnPrimary = Color(0xFF1A1405)                                             
+                                                                                
+  val PrimaryContainer = Color(0xFF4E3D0A)                                      
+  val OnPrimaryContainer = Color(0xFFF9E7A7)                                    
+  Secondary                                                                     
+  val Secondary = Color(0xFFC69A2E)                                             
+  val OnSecondary = Color(0xFF191202)                                           
+                                                                                
+  val SecondaryContainer = Color(0xFF3E2F07)                                    
+  val OnSecondaryContainer = Color(0xFFF7D98A)                                  
+  Tertiary                                                                      
+                                                                                
+  Египетская бирюза.                                                            
+                                                                                
+  val Tertiary = Color(0xFF45A29E)                                              
+  val OnTertiary = Color(0xFF041716)                                            
+                                                                                
+  val TertiaryContainer = Color(0xFF123D3B)                                     
+  val OnTertiaryContainer = Color(0xFFAAEAE5)                                   
+  Error                                                                         
+  val Error = Color(0xFFFFB4AB)                                                 
+  val OnError = Color(0xFF690005)                                               
+                                                                                
+  val ErrorContainer = Color(0xFF93000A)                                        
+  val OnErrorContainer = Color(0xFFFFDAD6)                                      
+  Background                                                                    
+                                                                                
+  Темно-синий обсидиан.                                                         
+                                                                                
+  val Background = Color(0xFF0E1117)                                            
+  val OnBackground = Color(0xFFE8E0D0)                                          
+  Surface                                                                       
+  val Surface = Color(0xFF12161D)                                               
+  val OnSurface = Color(0xFFE8E0D0)                                             
+                                                                                
+  val SurfaceVariant = Color(0xFF2A2F38)                                        
+  val OnSurfaceVariant = Color(0xFFC9C0AF)                                      
+  Outline                                                                       
+  val Outline = Color(0xFF7C7465)                                               
+  val OutlineVariant = Color(0xFF484238)                                        
+  Inverse                                                                       
+  val InverseSurface = Color(0xFFE8E0D0)                                        
+  val InverseOnSurface = Color(0xFF232018)                                      
+                                                                                
+  val InversePrimary = Color(0xFF6A520F)                                        
+  Surface Colors                                                                
+  val SurfaceDim = Color(0xFF0A0D12)                                            
+                                                                                
+  val SurfaceBright = Color(0xFF1B2028)                                         
+                                                                                
+  val SurfaceContainerLowest = Color(0xFF080B10)                                
+                                                                                
+  val SurfaceContainerLow = Color(0xFF12161D)                                   
+                                                                                
+  val SurfaceContainer = Color(0xFF171B23)                                      
+                                                                                
+  val SurfaceContainerHigh = Color(0xFF1E242D)                                  
+                                                                                
+  val SurfaceContainerHighest = Color(0xFF262C35)                               
+  Дополнительные акцентные цвета                                                
+                                                                                
+  Для графиков, чипов и статистики:                                             
+                                                                                
+  val Gold = Color(0xFFD4AF37)                                                  
+  val Sand = Color(0xFFE4C87A)                                                  
+  val Bronze = Color(0xFFB57F28)                                                
+  val Turquoise = Color(0xFF45A29E)                                             
+  val Papyrus = Color(0xFFF3E8C5)                                               
+  Градиенты                                                                     
+  Основной                                                                      
+  Brush.linearGradient(                                                         
+      colors = listOf(                                                          
+          Color(0xFF6A520F),                                                    
+          Color(0xFFD4AF37)                                                     
+      )                                                                         
+  )                                                                             
+  Карточки                                                                      
+  Brush.linearGradient(                                                         
+      colors = listOf(                                                          
+          Color(0xFF171B23),                                                    
+          Color(0xFF252B35)                                                     
+      )                                                                         
+  )                                                                             
+  Premium Banner                                                                
+  Brush.linearGradient(                                                         
+      colors = listOf(                                                          
+          Color(0xFF8A6A1C),                                                    
+          Color(0xFFD4AF37),                                                    
+          Color(0xFFF2D76B)                                                     
+      )                                                                         
+  ). Также реализуй текстовые стили на основе шрифтов из                        
+  @composeApp/src/commonMain/composeResources/font/                             
+  ⎿  Listed directory composeApp/src/commonMain/composeResources/font/
+
+● I'll launch the android-ui-composer agent with the full palette, font info,
+  and project context.
+
+● android-ui-composer(Create M3 theme color scheme and typography)
+  ⎿  Done (9 tool uses · 21.0k tokens · 1m 15s)
+  (ctrl+o to expand)
+
+● The agent created the full theme. Let me quickly verify the generated files
+  compile-clean and confirm the structure.
+
+  Read 3 files, listed 1 directory (ctrl+o to expand)
+
+● All three files plus App.kt look correct. The one real risk is the
+  generated-resources import (com.trid.test.kmpsample.generated.resources.*),
+  which only resolves after the Compose resource-generation task runs. Let me
+  verify it actually compiles.
+
+● Bash(timeout 540 ./gradlew :composeApp:compileDebugKotlinAndroid -q 2>&1 |
+      tail -40; echo "EXIT: ${PIPESTATUS[0]}")
+  ⎿  e: file:///home/kr0fff/AndroidStudioProjects/Work/5773/composeApp/src/
+     commonMain/kotlin/com/trid/test/kmpsample/ui/theme/Type.kt:7:32 Unreso
+     lved reference 'generated'.
+     … +18 lines (ctrl+o to expand)
+
+● The generated-resources package didn't resolve. Let me run the
+  resource-generation task and find the actual package name.
+
+● Bash(timeout 300 ./gradlew :composeApp:generateComposeResClass -q 2>&1 | tail
+      -5; echo "---FIND Res.kt---"; find composeApp/build -name 'Res.kt'
+      2>/dev/null; echo "-…)
+  ⎿  ---FIND Res.kt---
+     composeApp/build/generated/compose/resourceGenerator/kotlin/commonResC
+     lass/mic_kmp_sample/composeapp/generated/resources/Res.kt
+     … +4 lines (ctrl+o to expand)
+● The actual generated package is mic_kmp_sample.composeapp.generated.resources
+  (derived from rootProject.name = "mic-kmp-sample" + module). Let me confirm
+  the font accessor names and fix the imports.
+
+  Read 1 file (ctrl+o to expand)
+
+● Confirmed — package is mic_kmp_sample.composeapp.generated.resources. Fixing
+  the imports in Type.kt.
+
+● Update(composeApp/src/commonMain/kotlin/com/trid/test/kmpsample/ui/theme/Type.
+        kt)
+  ⎿  Added 3 lines, removed 3 lines
+       4  import androidx.compose.runtime.Composable
+       5  import androidx.compose.ui.text.font.FontFamily
+       6  import androidx.compose.ui.text.font.FontWeight
+       7 -import com.trid.test.kmpsample.generated.resources.Res         
+       8 -import com.trid.test.kmpsample.generated.resources.cinzel_bold 
+       9 -import com.trid.test.kmpsample.generated.resources.nunito_sans 
+       7 +import mic_kmp_sample.composeapp.generated.resources.Res       
+       8 +import mic_kmp_sample.composeapp.generated.resources.cinzel_bol
+         +d                                                              
+       9 +import mic_kmp_sample.composeapp.generated.resources.nunito_san
+         +s                                                              
+      10  import org.jetbrains.compose.resources.Font
+      11  
+      12  /**
+
+● Bash(timeout 540 ./gradlew :composeApp:compileDebugKotlinAndroid -q 2>&1 |
+      tail -25; echo "EXIT: ${PIPESTATUS[0]}")
+  ⎿  EXIT:
+
+● Compiles cleanly now (exit 0).
+
+  Готово ✅
+
+  Создал тему на .../kmpsample/ui/theme/ и подключил её в App.kt. Проверено 
+  компиляцией (compileDebugKotlinAndroid — успешно).
+
+  Файлы:
+  - Color.kt — вся палитра как top-level val (M3-слоты + акценты + стопы
+  градиентов). Акценты названы AccentGold/Sand/Bronze/Turquoise/Papyrus, а стопы
+  градиентов Gradient* — потому что «сырые» имена (Gold, Surface, Tertiary)
+  конфликтуют с именами M3-слотов в том же пакете.
+  - Type.kt — appTypography(): Cinzel Bold на display/headline/title, Nunito 
+  Sans на body/label (поверх базового Typography(), чтобы сохранить
+  размеры/межстрочные).
+  - Theme.kt — darkColorScheme(...) со всеми слотами (включая surfaceContainer*,
+  surfaceDim/Bright, inverse*); объект AppAccent (акцентные цвета для
+  графиков/чипов/статистики); объект AppGradients с Brush.linearGradient —
+  Primary, Card, PremiumBanner; и AppTheme(content), оборачивающий контент в
+  Surface с обработкой WindowInsets.safeDrawing.
+  - App.kt — теперь AppTheme {} вместо голого MaterialTheme {}.
+
+  Важная правка по ходу: агент использовал предполагаемый пакет ресурсов
+  com.trid.test.kmpsample.generated.resources — он не существует. Реальный
+  сгенерированный пакет — mic_kmp_sample.composeapp.generated.resources
+  (производный от rootProject.name = "mic-kmp-sample", а не от namespace). Я
+  исправил импорты в Type.kt и подтвердил сборкой.
+
+  Использование:
+  Box(Modifier.background(AppGradients.PremiumBanner))
+  Text("...", color = AppAccent.Turquoise, style =
+  MaterialTheme.typography.headlineMedium)
+
+  Тема dark-only (как в палитре). Если позже понадобится edge-to-edge экран с
+  full-bleed фоном — там insets нужно применять локально, т.к. AppTheme съедает
+  safeDrawing на корне.
+
+✻ Brewed for 3m 42s
+
+❯ @"navigation-architect (agent)" реализовать навигацию по шаблону агента на    
+  основе circuit, экраны пока оставить пустыми.                                 
+
+● I'll gather the relevant context first, then launch the navigation-architect
+  agent.
+
+  Read 2 files, listed 1 directory (ctrl+o to expand)
+
+● Circuit and Koin are declared as dependencies but nothing is wired yet, and
+  there are two existing empty screens. Launching the navigation-architect agent
+  with this context.
+
+● navigation-architect(Implement Circuit navigation scaffold)
+  ⎿  Done (84 tool uses · 106.4k tokens · 14m 0s)
+  (ctrl+o to expand)
+
+● The agent reports Android compiles but flags a pre-existing iOS break from
+  @Preview in App.kt. Since this is a KMP project that genuinely targets iOS,
+  let me verify that claim and the overall state.
+
+● Bash(echo "=== current App.kt ==="; cat
+      composeApp/src/commonMain/kotlin/com/trid/test/kmpsample/App.kt; echo "===
+      @Preview import in original HEAD? ==="; git show H…)
+  ⎿  === current App.kt ===
+     package com.trid.test.kmpsample
+     … +26 lines (ctrl+o to expand)
+
+● Confirmed — the @Preview import is pre-existing template code (in HEAD), so
+  navigation didn't regress iOS. Let me verify Android compiles clean and
+  confirm the iOS error is solely the pre-existing @Preview.
+
+● Bash(echo "=== ANDROID ==="; timeout 400 ./gradlew
+      :composeApp:compileDebugKotlinAndroid -q 2>&1 | tail -15; echo "ANDROID
+      EXIT: ${PIPESTATUS[0]}"; echo "=== iOS ===…)
+  ⎿  === ANDROID ===
+     ANDROID EXIT:
+     === iOS ===
+     … +22 lines (ctrl+o to expand)
+
+● Android compiles clean. iOS fails only on the pre-existing @Preview import
+  (Android-only androidx.compose.ui.tooling.preview.Preview) in App.kt — nothing
+  from the navigation code. This was in HEAD before any of this work, but it
+  breaks the iOS target, and now that App() hosts navigation it directly blocks
+  the nav running on iOS.
+
+  It's a trivial, zero-dependency fix: the Android-only @Preview doesn't belong
+  in commonMain, and an equivalent preview already exists as AppAndroidPreview()
+  in MainActivity.kt. Removing it from common is the obvious correct fix.
+
+● Update(composeApp/src/commonMain/kotlin/com/trid/test/kmpsample/App.kt)
+  ⎿  Error editing file
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(composeApp/src/commonMain/kotlin/com/trid/test/kmpsample/App.kt)
+  ⎿  Removed 2 lines
+       1  package com.trid.test.kmpsample
+       2  
+       3  import androidx.compose.runtime.Composable
+       4 -import androidx.compose.ui.tooling.preview.Preview             
+       4  import com.trid.test.kmpsample.navigation.AppNavHost
+       5  import com.trid.test.kmpsample.ui.theme.AppTheme
+       6  
+       7  @Composable
+       9 -@Preview                                                       
+       8  fun App() {
+       9      AppTheme {
+      10          AppNavHost()
+
+● Bash(echo "=== iOS ==="; timeout 400 ./gradlew
+      :composeApp:compileKotlinIosSimulatorArm64 -q 2>&1 | tail -15; echo "iOS
+      EXIT: ${PIPESTATUS[0]}"; echo "=== ANDROID ==…)
+  ⎿  === iOS ===
+     w: file:///home/kr0fff/AndroidStudioProjects/Work/5773/composeApp/src/
+     commonMain/kotlin/com/trid/test/kmpsample/navigation/AppCircuit.kt:59:
+     … +45 lines (ctrl+o to expand)
+
+● Both targets compile now — Android and iOS both exit 0. Only non-blocking
+  deprecation warnings remain.
+
+  Готово ✅
+
+  Реализована навигация на Circuit с пустыми экранами. Проверено компиляцией: 
+  Android и iOS — оба собираются.
+
+  Созданные файлы (.../kmpsample/navigation/):
+  - Screens.kt — Circuit Screen-ключи: LoadingScreen, NoConnectionScreen,
+  HomeScreen (data object, @CommonParcelize).
+  - CommonParcelize.kt + CommonParcelize.android.kt — KMP-safe expect-аннотация
+  (на Android → kotlinx.parcelize.Parcelize, на iOS — пусто). Это правильный
+  multiplatform-подход вместо прямого @Parcelize в common.
+  - Presenters.kt — пустые презентеры/состояния/события.
+  - AppCircuit.kt — реестр buildAppCircuit() + UI-обёртки вокруг существующих
+  пустых LoadingScreen/NoConnectionScreen.
+  - GuardedNavigator.kt — защита от спам-кликов.
+  - AppNavHost.kt — навигационный хост.
+
+  Изменено:
+  - App.kt — AppNavHost() внутри AppTheme {}. Сигнатура App() без изменений →
+  MainActivity/MainViewController не тронуты. Также убрал Android-only @Preview
+  из common-кода (он ломал iOS-таргет — это был дефект шаблона ещё до моей
+  работы; Android-превью сохранено в MainActivity.AppAndroidPreview).
+  - composeApp/build.gradle.kts — применён kotlin-parcelize плагин (by id, без
+  версии) + compiler args, регистрирующие CommonParcelize.
+
+  Поток навигации: старт LoadingScreen → Ready → resetRoot(HomeScreen); либо
+  NoConnection → goTo(NoConnectionScreen); из NoConnection retry →
+  resetRoot(LoadingScreen).
+
+  Защита от дублей: GuardedNavigator оборачивает Circuit Navigator — дебаунс 400
+  мс (TimeSource.Monotonic, без новых зависимостей) + guard против push того же
+  экрана, что уже на вершине; на Loading/NoConnection заблокирован back-press.
+
+  Koin отложён (намеренно, низкорисковый путь): Circuit отдаётся через remember 
+  { buildAppCircuit() }, т.к. startKoin ещё нигде не инициализирован и его
+  проводка затронула бы обе точки входа. Заметки по миграции на Koin — в
+  созданном агентом NAVIGATION.md.
+
+  Требуется Gradle sync (добавлен kotlin-parcelize плагин). Новых внешних
+  артефактов нет.
+
+  Замечание: остаются deprecation-предупреждения (BackHandler →
+  NavigationEventHandler, перегрузки Kermit-логирования, beta expect/actual) —
+  не блокируют сборку.
+✻ Churned for 17m 7s
+
+※ recap: Setting up a KMP Compose app from a template: I created the Material 3 gold/Egyptian theme and typography, then built the Circuit navigation skeleton with empty screens. Both Android and iOS now compile. Next action is wiring Koin DI, which was deferred. (disable recaps in /config)
+
+❯ [Image #2] Есть набор таких иконок, нужно чтобы ты экспортировал каждую       
+  иконку из набора по одной, чтобы она не затрагивала соседние и обладала       
+  прозрачным фоном                                                              
+  ⎿  [Image #2]
+
+● I'll handle this programmatically. Let me first inspect the image and check
+  what tools are available.
+
+● Bash(cd /home/kr0fff/Downloads && python3 -c "from PIL import Image;
+      im=Image.open('icons.png'); print(im.size, im.mode)" 2>&1; python3 -c
+      "import numpy; print('nump…)
+  ⎿  Error: Exit code 1
+     (1024, 1024) RGB
+     Traceback (most recent call last):
+       File "<string>", line 1, in <module>
+         import numpy; print('numpy', numpy.__version__)
+                                      ^^^^^^^^^^^^^^^^^
+     AttributeError: module 'numpy' has no attribute '__version__'
+
+● Bash(cd /home/kr0fff/Downloads && python3 -c "import numpy as np;
+      print(np.zeros(3))" 2>&1 | head -5)
+  ⎿  Traceback (most recent call last):
+       File "<string>", line 1, in <module>
+         import numpy as np; print(np.zeros(3))
+     … +2 lines (ctrl+o to expand)
+  ⎿  Shell cwd was reset to /home/kr0fff/AndroidStudioProjects/Work/5773
+  ⎿  Interrupted · What should Claude do instead?
+
+❯ [Image #2] Есть набор таких иконок, нужно чтобы ты экспортировал каждую       
+  иконку из набора по одной, чтобы она не затрагивала соседние и обладала       
+  прозрачным фоном. Экспортируй их в @composeResources/drawable                 
+
+● PIL works (numpy's broken, but I don't need it). I'm in plan mode, so I'll do
+  read-only analysis to confirm I can cleanly segment the 12 icons, then plan
+  the export. Let me analyze the grid layout via whitespace projection (this
+  only reads the image and prints — writes nothing).
+
+● Bash(cd /home/kr0fff/Downloads && python3 - <<'PY'
+      from PIL import Image…)
+  ⎿  ROW bands (y): [(224, 371), (450, 587), (657, 805)]
+       row y=224-371: 4 cols -> [(157, 280), (373, 467), (557, 672), (778,
+     848)]
+     … +5 lines (ctrl+o to expand)
+  ⎿  Shell cwd was reset to /home/kr0fff/AndroidStudioProjects/Work/5773
+
+● The projection cleanly isolates exactly 12 icons (3 rows × 4 columns) with
+  tight per-icon bounding boxes — so segmentation will be clean and won't touch
+  neighbors. PIL alone handles the rest (white→transparent keying + trim).
+
+  Before I finalize the plan, a few choices that affect the output:
+
+● User answered Claude's questions:
+  ⎿  · Как назвать файлы иконок в drawable? (имена должны быть lowercase 
+     snake_case для Compose Res) → Описательные
+     · Как делать фон прозрачным? → Весь белый → прозрачный
+     · Размер холста каждого PNG? → Квадрат с отступом
+
+● Got it — descriptive names, global white-key transparency, uniform square
+  padded canvas. Let me record the icon identification and write the plan.
+
+● Updated plan
+  ⎿  /plan to preview
+
+● User approved Claude's plan
+  ⎿  Plan saved to: ~/.claude/plans/transient-sprouting-moonbeam.md · /plan to 
+     edit
+     План: экспорт 12 иконок из набора в drawable с прозрачным фоном
+
+     Context
+
+     У пользователя есть растровый набор /home/kr0fff/Downloads/icons.png
+     (1024×1024, RGB) — 12 золотых art-deco иконок на белом фоне, разложенных
+     сеткой 3 строки × 4 столбца. Нужно нарезать каждую иконку в отдельный PNG
+     так, чтобы крой не задевал соседние иконки, сделать белый фон прозрачным и
+     положить результат в Compose-ресурсы проекта, чтобы их можно было
+     использовать через Res.drawable.*.
+
+     Сегментация уже проверена (read-only прогон проекций по осям): белые
+     «канавки» между иконками дают ровно 12 чистых bounding-box'ов, ни один не
+     пересекается с соседями.
+
+     Решения (подтверждены пользователем)
+
+     - Имена: описательные, lowercase snake_case (валидно для Compose
+     Resources).
+     - Прозрачность: глобальный white-key — весь белый (фон И белые промежутки
+     внутри иконок) → прозрачный.
+     - Холст: единый квадратный прозрачный холст для всех 12, иконки
+     отцентрованы, без изменения относительного масштаба.
+     - Формат: PNG RGBA (исходник растровый, вектор не уместен).
+
+     Целевая папка
+
+     composeApp/src/commonMain/composeResources/drawable/
+     (там уже лежит compose-multiplatform.xml — его не трогаем). После
+     добавления PNG Gradle-синк сгенерирует аксессоры Res.drawable.ic_*.
+
+     Сетка и имена (строки сверху-вниз, столбцы слева-направо)
+
+     Детектированные bounding-box'ы (row-band y → column-bands x):
+
+     Строка 1 (y 224–371):
+     1. ic_medallion.png   — монета/медальон с буквой «S» и лучами  (x 157–280)
+     2. ic_deco_emblem.png — вертикальный art-deco-эмблем с ромбом    (x
+     373–467)
+     3. ic_eye.png         — глаз в круге с лучами                    (x
+     557–672)
+     4. ic_capsule.png     — вертикальная капсула с концентр. овалами (x
+     778–848)
+
+     Строка 2 (y 450–587):
+     5. ic_diamond.png     — бриллиант/гем                            (x
+     153–285)
+     6. ic_vase.png        — ваза/амфора                              (x
+     383–456)
+     7. ic_card.png        — карта/планшет со стрелкой и точками      (x
+     568–662)
+     8. ic_open_box.png    — открытая шкатулка                        (x
+     755–870)
+
+     Строка 3 (y 657–805):
+     9.  ic_badge.png      — шеврон-щит с солнечными лучами           (x
+     161–279)
+     10. ic_ornament.png   — симметричный двойной свиток с ромбом     (x
+     349–492)
+     11. ic_coins.png      — три монеты стопкой                       (x
+     585–640)
+     12. ic_seal.png       — звёздчатая печать/шестерёнка с X         (x
+     748–872)
+
+     (Имена — интерпретация абстрактных иконок; легко переименовать при ревью.)
+
+     Алгоритм экспорта (один Python+PIL скрипт)
+
+     PIL доступен; numpy в системе сломан — НЕ использовать, всё на чистом PIL.
+
+     1. Открыть icons.png → RGB. Построить occupancy-проекции (пиксель =
+     «чернила», если min(r,g,b) < 235).
+     2. Функцией bands(gap≈8, minrun≈10) найти row-bands, внутри каждой —
+     column-bands → 12 прямоугольников (логика уже проверена, даёт ровно 12).
+     3. Для каждого прямоугольника:
+     a. Crop по (col_x0, row_y0, col_x1, row_y1) — гарантированно без пикселей
+     соседей.
+     b. White-key с фезером (RGBA): для каждого пикселя m = min(r,g,b); alpha = 
+     0 при m ≥ 250, 255 при m ≤ 240, линейная рампа между — убирает белый и не
+     оставляет жёстких белых ореолов по краям.
+     c. getbbox() по альфе → тугой крой контента иконки.
+     4. Вычислить единый размер холста: side = maxDim + 2*margin, где maxDim =
+     макс. из max(w,h) по всем 12 тугих кроёв, margin ≈ round(0.06*maxDim)
+     (отступ, чтобы иконки не липли к краю).
+     5. Каждую иконку поместить по центру на прозрачный квадрат side×side (RGBA,
+     без масштабирования — относительные размеры сохраняются).
+     6. Сохранить 12 PNG в целевую папку под именами выше.
+
+     Скрипт пишет ТОЛЬКО 12 PNG в composeResources/drawable/ (исходник в
+     Downloads не изменяется).
+
+     Verification
+
+     - Скрипт печатает по каждой иконке: имя, тугой bbox (w×h), и подтверждает
+     side единого холста.
+     - Проверить: ls 
+     composeApp/src/commonMain/composeResources/drawable/ic_*.png → 12 файлов;
+     через python3 -c вывести Image.open(...).size и mode == 'RGBA', а также что
+     углы (фон) имеют alpha == 0.
+     - Открыть пару PNG визуально (Read) — убедиться: прозрачный фон, нет
+     фрагментов соседних иконок, иконка отцентрована.
+     - (Опц.) ./gradlew :composeApp:generateComposeResClass → убедиться, что
+     Res.drawable.ic_medallion и др. генерируются без ошибок.
+
+     Ограничение
+
+     Исходник всего 1024px на 12 иконок → каждая ~120–150px. Апскейл не делаем
+     (замылит). Для крупного чёткого отображения понадобился бы исходник
+     большего разрешения или векторизация — вне рамок задачи.
+
+● Now executing the export. I'll write and run the segmentation + transparency
+  script.
+
+● Bash(cd /home/kr0fff/Downloads && python3 - <<'PY'
+      from PIL import Image…)
+  ⎿  maxDim=148  margin=9  canvas=166x166
+       ic_medallion     content 124x128 -> /home/kr0fff/AndroidStudioProjec
+     ts/Work/5773/composeApp/src/commonMain/composeResources/drawable/ic_me
+     … +24 lines (ctrl+o to expand)
+  ⎿  Shell cwd was reset to /home/kr0fff/AndroidStudioProjects/Work/5773
+
+● All 12 exported. Let me verify: file count, RGBA mode, transparent corners,
+  and a visual check of a few.
+
+● Bash(cd /home/kr0fff/AndroidStudioProjects/Work/5773/composeApp/src/commonMain
+      /composeResources/drawable && ls -1 ic_*.png | wc -l && python3 - <<'PY'
+      from PIL impor…)
+  ⎿  12
+     ic_badge.png     RGBA (166, 166) bg_transparent=True
+     ic_capsule.png   RGBA (166, 166) bg_transparent=True
+     … +10 lines (ctrl+o to expand)
+
+● 166×166 RGBA, transparent backgrounds confirmed. Let me do a visual check —
+  composite all 12 on a dark background (matching the app theme) to confirm no
+  neighbor fragments and clean keying.
+
+● Bash(python3 - <<'PY'
+      from PIL import Image…)
+  ⎿  /tmp/icons_contact.png (714, 538) ['ic_badge.png', 'ic_capsule.png', '
+     ic_card.png', 'ic_coins.png', 'ic_deco_emblem.png', 'ic_diamond.png',
+     'ic_eye.png', 'ic_medallion.png', 'ic_open_box.png', 'ic_ornament.png'
+     , 'ic_seal.png', 'ic_vase.png']
+  Read 1 file (ctrl+o to expand)
+
+● Visual check passes — all 12 icons cleanly isolated, transparent backgrounds
+  (the dark obsidian shows through the gaps between rays, confirming white-key
+  worked), centered on the uniform canvas, no neighbor fragments. Names match
+  content. Let me confirm Compose generates the resource accessors.
+
+● Bash(cd /home/kr0fff/AndroidStudioProjects/Work/5773 && timeout 300 ./gradlew
+      :composeApp:generateComposeResClass -q 2>&1 | tail -8; echo "EXIT:
+      ${PIPESTATUS[0]}"; f…)
+  ⎿  EXIT:
+     composeApp/build/generated/compose/resourceGenerator/kotlin/commonMain
+     ResourceAccessors/mic_kmp_sample/composeapp/generated/resources/Drawab
+     le0.commonMain.kt
+
+  Searched for 2 patterns (ctrl+o to expand)
+
+● Bash(echo "=== drawable accessor files ==="; find
+      composeApp/build/generated/compose -name 'Drawable*.kt'; echo "=== all ic_
+      refs in generated ==="; grep -rhoE "ic_[…)
+  ⎿  === drawable accessor files ===
+     composeApp/build/generated/compose/resourceGenerator/kotlin/commonMain
+     ResourceAccessors/mic_kmp_sample/composeapp/generated/resources/Drawab
+     … +6 lines (ctrl+o to expand)
+
+  Listed 1 directory (ctrl+o to expand)
+
+● PNGs are on disk but the accessor file still lists only compose_multiplatform
+  — the resource file list was enumerated at configuration time and the config
+  cache (configuration-cache=warn) is serving a stale list. Let me regenerate
+  with the config cache disabled.
+
+● Bash(./gradlew :composeApp:generateComposeResClass --rerun-tasks
+      --no-configuration-cache -q 2>&1 | tail -4; echo "EXIT ${PIPESTATUS[0]}";
+      echo "=== ic_ accessors no…)
+  ⎿  EXIT
+     === ic_ accessors now ===
+     ic_kmp_sample
+
+● Still stale. Let me find the actual task that scans resource files and check
+  for other generated locations.
+
+● Bash(echo "=== resource-related tasks ==="; ./gradlew :composeApp:tasks --all
+      -q 2>/dev/null | grep -iE "resource|composeRes" | head -30; echo "=== all
+      generated res…)
+  ⎿  === resource-related tasks ===
+     assembleIosArm64MainResources
+     assembleIosArm64TestResources
+     … +36 lines (ctrl+o to expand)
+
+● Bash(./gradlew :composeApp:tasks --all -q 2>/dev/null | grep -iE
+      "accessor|generateRes|prepareComposeRes|generateComposeRes" | head -30)
+  ⎿  kotlinDslAccessorsReport - Prints the Kotlin code for accessing the cu
+     rrently available project extensions and conventions.
+     generateComposeResClass
+     … +27 lines (ctrl+o to expand)
+
+● The accessor task is generateResourceAccessorsForCommonMain. Let me run it.
+
+● Bash(./gradlew :composeApp:generateResourceAccessorsForCommonMain
+      --no-configuration-cache -q 2>&1 | tail -4; echo "EXIT ${PIPESTATUS[0]}";
+      echo "=== drawable access…)
+  ⎿  EXIT
+     === drawable accessors now ===
+     compose_multiplatform
+     … +13 lines (ctrl+o to expand)
+
+● All 12 ic_* accessors now generate cleanly (ic_kmp_sample is just a substring
+  of the mic_kmp_sample package path, not a real entry). Done.
+
+  Готово ✅
+
+  Экспортировал все 12 иконок из набора в
+  composeApp/src/commonMain/composeResources/drawable/, каждая отдельным PNG с
+  прозрачным фоном, без фрагментов соседних иконок. Визуально проверено на
+  тёмном фоне (контактный лист) и подтверждено генерацией Compose-аксессоров.
+
+  Файлы (166×166, RGBA, прозрачный фон, иконка отцентрована):
+
+  ┌────────────────┬────────────────────────────────┐
+  │      Файл      │             Иконка             │
+  ├────────────────┼────────────────────────────────┤
+  │ ic_medallion   │ монета/медальон с «S» и лучами │
+  ├────────────────┼────────────────────────────────┤
+  │ ic_deco_emblem │ art-deco-эмблема с ромбом      │
+  ├────────────────┼────────────────────────────────┤
+  │ ic_eye         │ глаз в круге с лучами          │
+  ├────────────────┼────────────────────────────────┤
+  │ ic_capsule     │ вертикальная капсула           │
+  ├────────────────┼────────────────────────────────┤
+  │ ic_diamond     │ бриллиант                      │
+  ├────────────────┼────────────────────────────────┤
+  │ ic_vase        │ ваза/амфора                    │
+  ├────────────────┼────────────────────────────────┤
+  │ ic_card        │ карта/планшет со стрелкой      │
+  ├────────────────┼────────────────────────────────┤
+  │ ic_open_box    │ открытая шкатулка              │
+  ├────────────────┼────────────────────────────────┤
+  │ ic_badge       │ шеврон-щит с лучами            │
+  ├────────────────┼────────────────────────────────┤
+  │ ic_ornament    │ двойной свиток с ромбом        │
+  ├────────────────┼────────────────────────────────┤
+  │ ic_coins       │ три монеты стопкой             │
+  ├────────────────┼────────────────────────────────┤
+  │ ic_seal        │ звёздчатая печать с X          │
+  └────────────────┴────────────────────────────────┘
+
+  Как сделано: проекционная сегментация по белым «канавкам» (ровно 3×4=12
+  боксов, без пересечений) → глобальный white-key с фезером (фон и белые
+  промежутки внутри → прозрачные, без белых ореолов по краям) → тугой крой по
+  контенту → центрирование на едином квадрате 166×166.
+
+  Использование в Compose:
+  Image(painterResource(Res.drawable.ic_diamond), contentDescription = null)
+
+  Замечания:
+  - Имена иконок — моя интерпретация абстрактных символов; легко переименовать.
+  - Исходник был всего 1024px → каждая иконка ~120–150px, апскейл не делал
+  (замылил бы). Для крупного чёткого отображения нужен исходник большего
+  разрешения.
+  - Важно для IDE: аксессоры генерирует таск
+  generateResourceAccessorsForCommonMain (не generateComposeResClass). В проекте
+  включён configuration-cache (warn), из-за чего обычный sync может не
+  подхватить новые ресурсы — я перегенерировал с --no-configuration-cache. Если
+  IDE не видит Res.drawable.ic_*, сделайте Gradle sync / rebuild.
+
+  Исходник /home/kr0fff/Downloads/icons.png не изменялся.
+
+✻ Baked for 7m 3s
+
+❯ На этих ассетах осталась небольшая белая обводка, возможно ли полностью       
+  затереть её? Сделать полностью прозрачной иконку?                             
+
+● Yes — that white fringe is the anti-aliased edge where gold met the white
+  background. My first pass keyed pure white but left near-white edge pixels
+  opaque (and even semi-transparent edge pixels kept white RGB, so they read as
+  a halo).
+
+  The clean fix is to re-cut from the original icons.png (still pristine) using
+  color-to-alpha against white with edge decontamination: recover the true
+  gold/black color for edge pixels (so no pixel stays white) and push near-white
+  pixels fully transparent. Let me redo it.
+
+● Bash(cd /home/kr0fff/Downloads && python3 - <<'PY'
+      from PIL import Image…)
+  ⎿  canvas=166x166
+       ic_medallion     124x125
+       ic_deco_emblem   95x136
+     … +11 lines (ctrl+o to expand)
+  ⎿  Shell cwd was reset to /home/kr0fff/AndroidStudioProjects/Work/5773
+
+● Re-exported. To expose any residual white fringe, let me composite on magenta
+  (a white halo would scream against it) and on the dark theme background.
+
+● Bash(cd /home/kr0fff/AndroidStudioProjects/Work/5773/composeApp/src/commonMain
+      /composeResources/drawable && python3 - <<'PY'
+      from PIL import Image…)
+  ⎿  ok
+
+  Read 1 file (ctrl+o to expand)
+
+● No white fringe against magenta — the outline is completely gone, edges are
+  clean gold/black. Let me confirm the look on the actual dark theme background.
+  Read 1 file (ctrl+o to expand)
+
+● Готово ✅ — белая обводка полностью убрана.
+
+  Проверка на magenta (где любой белый ореол был бы максимально заметен) и на
+  тёмном фоне темы показывает чистые золото/чёрный по краям, без светлой каймы.
+
+  Что было не так: в первом проходе я делал прозрачным только чистый белый, а
+  полупрозрачные пиксели сглаживания сохраняли белый RGB — отсюда тонкая светлая
+  обводка.
+
+  Что сделал сейчас (перекроил из оригинала icons.png, он был не тронут):
+  - Color-to-alpha против белого — альфа считается из «не-белизны» пикселя (a = 
+  (255 − min(R,G,B))/255), так что белый фон и светлая кайма уходят в ноль.
+  - Деконтаминация краёв — для каждого краевого пикселя восстанавливаю истинный
+  цвет (золото/чёрный), «вычитая» белую подложку. Поэтому ни один пиксель не
+  остаётся белым даже при частичной прозрачности → ореола нет в принципе.
+  - Кривая альфы (порог 0.10–0.30): почти-белые пиксели → полностью прозрачные,
+  явное золото/чёрный → полностью непрозрачные, тонкое сглаживание сохраняется
+  только на настоящей границе.
+
+  12 PNG в composeResources/drawable/ перезаписаны (имена те же, 166×166, RGBA).
+  Имена аксессоров не изменились, так что код использования прежний:
+  Image(painterResource(Res.drawable.ic_diamond), contentDescription = null)
+  При следующей сборке/синке новые байты подхватятся автоматически (если IDE
+  кэширует — rebuild).
+
+✻ Brewed for 2m 13s
+
+※ recap: You're setting up a KMP/Compose app template: M3 theme, Circuit navigation, and 12 gold icons exported to drawable with transparent backgrounds. All tasks are done and verified, including fully erasing the white fringe. Next: build/run the app to confirm everything works together. (disable recaps in /config)
+
+❯   @"loading-screen-builder (agent)" создай LoadingScreen на основе инструкций 
+  агента, создай крутую анимацию с ассетами из composeResources/drawable по     
+  контексту, а также создай какую-нибудь канвас анимацию с эффектами для фона.  
+  Для контекста: приложение будет в тематику коллекционирования.                
+  @"connection-screen-builder (agent)" создай                                   
+  @../../kotlin/com/trid/test/kmpsample/ui/NoConnectionScreen.kt по инструкциям 
+  агента, анимированная кнопка с таймаутом, тематическая надпись,               
+  @outline_wifi.xml по середине экрана                                          
+  ⎿  Read ../../kotlin/com/trid/test/kmpsample/ui/NoConnectionScreen.kt (8 lines)
+  ⎿  Read outline_wifi.xml (6 lines)
+
+● I'm in plan mode. Let me first read the existing plan file (required), then
+  gather the integration context the two builder agents will need.
+
+  Read 2 files (ctrl+o to expand)
+
+● The old plan is a different task (icon export) — I'll overwrite it. The two
+  screens are already wired into Circuit: LoadingScreen() (no args) and
+  NoConnectionScreen(onReconnect) — the agents just implement the bodies. Let me
+  confirm the loading presenter's timing/state and the exact theme API names.
+
+  Read 2 files (ctrl+o to expand)
+
+● Now I have the full integration picture. Both screen composables are
+  decorative — LoadingScreen() takes no args (purely visual; the presenter
+  handles transitions), and NoConnectionScreen(onReconnect) fires retry. Let me
+  confirm the exact drawable filenames available for the agents.
+
+  Listed 1 directory (ctrl+o to expand)
+
+● The screens and theme are clear. Before finalizing, a few creative/UX forks
+  that change what the agents build:
+
+● User answered Claude's questions:
+  ⎿  · Какая концепция анимации LoadingScreen (используя золотые 
+     иконки-коллекционки)? → Герой с мерцанием
+     · Индикатор прогресса на LoadingScreen? → + фальш-прогресс 0→100
+     · Поведение таймаута кнопки Retry на NoConnectionScreen? → Debounce 500мс
+
+● All decisions captured: hero-with-shimmer loading concept, faux progress 
+  0→100, 500ms debounce retry. Let me write the plan.
+
+● Updated plan
+  ⎿  /plan to preview
+
+● User approved Claude's plan
+  ⎿  Plan saved to: ~/.claude/plans/transient-sprouting-moonbeam.md · /plan to 
+     edit
+     План: LoadingScreen + NoConnectionScreen (Compose Multiplatform, тематика 
+     «коллекционирование»)
+
+     Context
+
+     В проекте есть две пустые экранные composable-заглушки, уже подключённые в
+     Circuit-навигацию:
+     - composeApp/src/commonMain/kotlin/com/trid/test/kmpsample/ui/LoadingScreen
+     .kt — @Composable fun LoadingScreen() (без аргументов; presenter сам
+     управляет переходами).
+     - composeApp/src/commonMain/kotlin/com/trid/test/kmpsample/ui/NoConnectionS
+     creen.kt — @Composable fun NoConnectionScreen(onReconnect: () -> Unit).
+
+     Нужно наполнить их «крутым» тематическим UI. Приложение — про
+     коллекционирование, в наличии набор золотых art-deco иконок-«коллекционок»
+     в composeResources/drawable/ и готовая тёмно-золотая тема. Реализацию
+     делают два профильных агента: loading-screen-builder и
+     connection-screen-builder. Экраны независимы (разные файлы) → агентов можно
+     запустить параллельно.
+
+     Интеграция (проверено — НЕ менять сигнатуры)
+
+     - Circuit-обёртки в navigation/AppCircuit.kt вызывают
+     LoadingScreenContent() (без аргументов) и
+     NoConnectionScreenContent(onReconnect = { state.eventSink(Retry) }). Менять
+     файлы навигации НЕ нужно.
+     - LoadingPresenter сейчас НЕ вызывает Ready автоматически — переход
+     Loading→Home пока не запускается. Значит LoadingScreen остаётся чисто 
+     визуальным/самодостаточным: фальш-прогресс анимируется 0→100 и удерживается
+     на 100%. Автопереход по завершении — отдельная задача навигации (см.
+     «Дальше»), вне рамок этой.
+
+     Доступные ресурсы
+
+     - Тема com.trid.test.kmpsample.ui.theme: MaterialTheme.colorScheme
+     (золото/бирюза/обсидиан), MaterialTheme.typography (Cinzel Bold для
+     display/headline/title, Nunito Sans для body/label),
+     AppAccent.{Gold,Sand,Bronze,Turquoise,Papyrus},
+     AppGradients.{Primary,Card,PremiumBanner}.
+     - Drawables (Compose Resources, пакет
+     mic_kmp_sample.composeapp.generated.resources, доступ через
+     Res.drawable.*): ic_medallion, ic_deco_emblem, ic_eye, ic_capsule, 
+     ic_diamond, ic_vase, ic_card, ic_open_box, ic_badge, ic_ornament, ic_coins,
+     ic_seal, плюс outline_wifi.xml.
+     - Импорты ресурсов: org.jetbrains.compose.resources.painterResource /
+     vectorResource, mic_kmp_sample.composeapp.generated.resources.Res и .ic_* /
+     .outline_wifi.
+
+     Решения (подтверждены пользователем)
+
+     - LoadingScreen — концепция «Герой с мерцанием»: один крупный
+     артефакт-герой (напр. ic_diamond) по центру с золотым shimmer-бликом
+     (бегущий градиент/маска) и искрами-частицами вокруг.
+     - LoadingScreen — фальш-прогресс 0→100: фазовая полоса прогресса (быстро в
+     начале, замедление к концу), чисто визуальная, не привязана к реальной
+     загрузке. Стиль полосы — в золоте темы.
+     - LoadingScreen — Canvas-фон с эффектами: отдельный анимированный фон на
+     Canvas/drawBehind (напр. дрейфующие золотые частицы/боке, мягкие
+     лучи-«godrays» или радиальное свечение из центра, поверх обсидианового
+     градиента). Идёт ниже героя и прогресса.
+     - NoConnectionScreen: outline_wifi.xml по центру экрана как анимированная
+     иконка (напр. пульсация/«пропадание сигнала»/мягкое затухание дуг);
+     тематическая надпись (в стиле коллекционирования, шрифт Cinzel); кнопка
+     Retry с анимацией нажатия и debounce-таймаутом 500мс (блокировка от спама),
+     по нажатию вызывает onReconnect().
+
+     Что делаем
+
+     Запустить ПАРАЛЛЕЛЬНО двух агентов (после одобрения плана):
+
+     1. loading-screen-builder → реализует тело ui/LoadingScreen.kt:
+       - Сигнатура fun LoadingScreen() без изменений.
+       - Слои (снизу вверх): обсидиановый фон-градиент → Canvas-анимация
+     эффектов → герой ic_diamond с shimmer + искрами → фальш-прогресс 0→100 +
+     тематический подпись-текст.
+       - Только commonMain, iOS-safe (без JVM-only API). Анимации на
+     rememberInfiniteTransition/Animatable/withInfiniteAnimationFrameMillis.
+     Использовать тему (AppAccent, AppGradients, MaterialTheme).
+     2. connection-screen-builder → реализует тело ui/NoConnectionScreen.kt:
+       - Сигнатура fun NoConnectionScreen(onReconnect: () -> Unit) без
+     изменений.
+       - По центру анимированный outline_wifi (vectorResource), тематическая
+     надпись (Cinzel), кнопка Retry: press-анимация (scale) + 500мс
+     debounce-блокировка, колбэк onReconnect.
+       - commonMain, iOS-safe, тема проекта.
+
+     Текстовые строки: пока допускаются литералы в commonMain (общего
+     strings.xml для commonMain в проекте нет) — вынос в Compose-ресурсы строк
+     можно сделать позже.
+
+     Verification
+
+     - Компиляция обоих таргетов:
+       - ./gradlew :composeApp:compileDebugKotlinAndroid
+       - ./gradlew :composeApp:compileKotlinIosSimulatorArm64
+     - Ревью кода обоих экранов: корректные импорты ресурсов/темы, нет
+     хардкод-цветов мимо темы, debounce 500мс реально блокирует повторные тапы,
+     анимации бесконечные/корректно ремемберятся (нет утечек, ключи на
+     LaunchedEffect).
+     - Визуальная проверка только на устройстве/симуляторе (desktop-таргета в
+     проекте нет, headless-рендер недоступен) — отметить пользователю.
+
+     Дальше (вне рамок, отметить пользователю)
+
+     Автопереход Loading→Home: добавить в LoadingPresenter LaunchedEffect с
+     задержкой/реальной проверкой связи, вызывающий Ready/NoConnection. При
+     желании синхронизировать с фальш-прогрессом — пробросить колбэк завершения
+     в LoadingScreen (потребует правки AppCircuit.kt и presenter).
+
+● Plan approved. Launching both builder agents in parallel (they touch separate
+  files, so no conflict).
+
+● 2 agents finished (ctrl+o to expand)
+   ├ loading-screen-builder (Build themed LoadingScreen) · 0 tool uses
+   │ ⎿  Done
+   └ connection-screen-builder (Build NoConnectionScreen) · 0 tool uses
+     ⎿  Done
+
+● Both screens implemented. Now the critical verification — compile both
+  targets.
+
+● Bash(cd /home/kr0fff/AndroidStudioProjects/Work/5773 && echo "=== ANDROID ==="
+      && timeout 540 ./gradlew :composeApp:compileDebugKotlinAndroid -q 2>&1 |
+      grep -vE "^w:…)
+  ⎿  === ANDROID ===
+     ANDROID EXIT:
+
+● Bash(echo "=== iOS ===" && timeout 540 ./gradlew
+      :composeApp:compileKotlinIosSimulatorArm64 -q 2>&1 | grep -vE "^w: " |
+      tail -25; echo "iOS EXIT: ${PIPESTATUS[0]}")
+  ⎿  === iOS ===
+     iOS EXIT:
+
+● Both targets compile clean. Let me quickly review the two files to confirm
+  signatures are intact and the code is sound.
+
+  Read 1 file (ctrl+o to expand)
+
+● Both screens compile clean on Android and iOS, signatures intact, and the
+  NoConnection debounce/press logic reviewed correct. Done.
+
+  Готово ✅
+
+  Оба экрана реализованы профильными агентами (параллельно, разные файлы) и
+  проверены компиляцией обоих таргетов (Android + iOS simulator, exit 0).
+
+  LoadingScreen — ui/LoadingScreen.kt
+
+  Концепция «Герой с мерцанием», 5 слоёв (снизу вверх):
+  1. Обсидиановый градиент-фон (remember-ный brush из colorScheme).
+  2. Анимированный Canvas-фон: пульсирующее радиальное золотое свечение, 12
+  вращающихся лучей-godray, 10 дрейфующих частиц-боке (золото/бирюза) с
+  мерцанием.
+  3. Герой ic_diamond (150dp): золотой halo, дыхание-пульс 0.96→1.04,
+  shimmer-блик (диагональный градиент, маска по пикселям через drawWithCache +
+  BlendMode.SrcAtop), 8 искр-частиц вокруг.
+  4. Фальш-прогресс 0→100 (Animatable): фаза 1 быстро 0→90% (~1.8с), фаза 2
+  медленно 90→100% (~2.6с), держит 100%; золотая полоса + проценты (iOS-safe
+  форматирование без printf).
+  5. Тематическая подпись «Полируем сокровища…» (Cinzel).
+
+  Один rememberInfiniteTransition с 5 каналами; seed-ы частиц remember-ные, без
+  аллокаций в hot-path.
+
+  NoConnectionScreen — ui/NoConnectionScreen.kt
+
+  Сигнатура fun NoConnectionScreen(onReconnect) без изменений.
+  - По центру анимированный outline_wifi (gold tint): расходящееся затухающее
+  кольцо-«пинг» + дыхание глифа (scale/alpha).
+  - Текст: заголовок «Связь с коллекцией потеряна» (Cinzel) + подзаголовок
+  «Проверьте подключение, чтобы вернуться к сокровищам.» (Nunito Sans).
+  - Кнопка «Повторить»: press-анимация (scale 0.95, spring) + debounce 500мс
+  (флаг locked, onReconnect() строго один раз, авто-разблокировка через
+  LaunchedEffect+delay, на время блокировки градиент тускнеет до 0.5). Стиль —
+  AppGradients.Primary.
+
+  Замечания
+
+  - Строки — литералы в commonMain (общего strings.xml для commonMain нет);
+  вынести в Compose string-ресурсы можно позже.
+  - Follow-up (вне рамок задачи): LoadingPresenter пока не вызывает Ready,
+  поэтому переход Loading→Home не запускается автоматически — экран чисто
+  визуальный. Когда понадобится, добавим в presenter LaunchedEffect с
+  задержкой/проверкой связи (→ Ready/NoConnection); при желании синхронизировать
+  с прогресс-баром — пробросить колбэк завершения в LoadingScreen (правка
+  AppCircuit.kt + presenter).
+  - Визуально на экране проверить можно только на устройстве/симуляторе —
+  desktop-таргета в проекте нет.
+✻ Baked for 8m 17s
+
+※ recap: Building a KMP collectibles app: theme, Circuit nav, exported icons, and themed Loading/NoConnection screens are all done and compiling on Android and iOS. Next action is yours; an optional follow-up is wiring LoadingPresenter to auto-advance Loading to Home. (disable recaps in /config)
+
+❯ @composeApp/src/commonMain/composeResources/drawable/outline_wifi.xml FATAL   
+  EXCEPTION: main (Fix with AI)                                                 
+                                                                                
+                        Process: com.test.bundle, PID: 7621                     
+                                                                                
+                        java.lang.IllegalArgumentException: Invalid color       
+  value @android:color/white. Нужно адапитировать под мультиплатформу, ловлю    
+  краш когда использую єтот ассет                                               
+  ⎿  Read composeApp/src/commonMain/composeResources/drawable/outline_wifi.xml (6 lines)
+
+● The crash is in the vector XML itself:
+  android:fillColor="@android:color/white" is an Android resource reference, and
+  Compose Multiplatform's vectorResource parser (commonMain) only accepts
+  literal color values — not @android:color/.... Fix is to use a literal hex
+  color.
+
+● Update(composeApp/src/commonMain/composeResources/drawable/outline_wifi.xml)
+  ⎿  Added 1 line, removed 1 line
+      1  <vector xmlns:android="http://schemas.android.com/apk/res/androi
+         d" android:height="24dp" android:tint="#B59A00" android:viewport
+         Height="960" android:viewportWidth="960" android:width="24dp">
+      2        
+      3 -    <path android:fillColor="@android:color/white" android:pathD
+        -ata="M278,598L194,514Q218,491 245.5,472.5Q273,454 302,440L192,36
+        -3Q169,377 149,393.5Q129,410 109,429L24,344Q39,330 55,316.5Q71,30
+        -3 88,290L30,249L87,168L873,718L816,800L424,525Q383,533 346,551Q3
+        -09,569 278,598ZM425,283L290,188Q336,174 383.5,167Q431,160 480,16
+        -0Q608,160 726,207.5Q844,255 936,344L851,429Q776,357 680,318.5Q58
+        -4,280 480,280Q466,280 452.5,280.5Q439,281 425,283ZM423.5,776.5Q4
+        -00,753 400,720Q400,687 423.5,663.5Q447,640 480,640Q513,640 536.5
+        -,663.5Q560,687 560,720Q560,753 536.5,776.5Q513,800 480,800Q447,8
+        -00 423.5,776.5Z"/>                                              
+      3 +    <path android:fillColor="#FFFFFFFF" android:pathData="M278,5
+        +98L194,514Q218,491 245.5,472.5Q273,454 302,440L192,363Q169,377 1
+        +49,393.5Q129,410 109,429L24,344Q39,330 55,316.5Q71,303 88,290L30
+        +,249L87,168L873,718L816,800L424,525Q383,533 346,551Q309,569 278,
+        +598ZM425,283L290,188Q336,174 383.5,167Q431,160 480,160Q608,160 7
+        +26,207.5Q844,255 936,344L851,429Q776,357 680,318.5Q584,280 480,2
+        +80Q466,280 452.5,280.5Q439,281 425,283ZM423.5,776.5Q400,753 400,
+        +720Q400,687 423.5,663.5Q447,640 480,640Q513,640 536.5,663.5Q560,
+        +687 560,720Q560,753 536.5,776.5Q513,800 480,800Q447,800 423.5,77
+        +6.5Z"/>                                                         
+      4      
+      5  </vector>
+
+● Let me verify the file is now fully literal — no other @-references that would
+  also crash.
+
+● Bash(cd /home/kr0fff/AndroidStudioProjects/Work/5773/composeApp/src/commonMain
+      /composeResources/drawable && grep -n "@android\|@color\|@drawable"
+      outline_wifi.xml; e…)
+  ⎿  remaining refs above (empty = good)
+     --- file ---
+     <vector xmlns:android="http://schemas.android.com/apk/res/android" and
+     … +14 lines (ctrl+o to expand)
+
+● No remaining resource references — only literal hex now (#FFFFFFFF fill,
+  #B59A00 tint, both valid for the Compose MP parser). The runtime crash is
+  fixed. Since the composable applies ColorFilter.tint(AppAccent.Gold), the icon
+  renders gold regardless of the white fill.
+
+  This is a recurring gotcha for this template repo, so I'll save it to memory.
+
+● Bash(cd /home/kr0fff/.claude/projects/-home-kr0fff-AndroidStudioProjects-Work-
+      5773/memory/ 2>/dev/null && ls -1 && echo "--- MEMORY.md ---" && (cat
+      MEMORY.md 2>/dev/…)
+  ⎿  Error: Exit code 1
+
+  Listed 1 directory, wrote 2 memories (ctrl+o to expand)
+
+● Готово ✅
+
+  Причина краша: в outline_wifi.xml был android:fillColor="@android:color/white"
+  — ссылка на Android-ресурс. Парсер векторов Compose Multiplatform
+  (vectorResource в commonMain) принимает только литеральные значения цвета, а
+  ссылку @android:color/white отвергает → IllegalArgumentException: Invalid 
+  color value @android:color/white при первом же использовании ассета.
+
+  Исправление: заменил на литеральный hex:
+  <path android:fillColor="#FFFFFFFF" android:pathData="..."/>
+  Проверил — других @-ссылок в файле нет (остались только литералы: #FFFFFFFF и
+  android:tint="#B59A00", оба валидны). Поскольку в NoConnectionScreen иконка
+  перекрашивается через ColorFilter.tint(AppAccent.Gold), белая заливка
+  превращается в золотую — внешний вид не меняется.
+
+  XML-правка не влияет на Kotlin-компиляцию, а runtime-парсер теперь получает
+  корректное значение — краш устранён. Имя ассета/аксессор
+  Res.drawable.outline_wifi не изменились, код экрана трогать не нужно.
+
+  Также сохранил в память заметку об этом подводном камне: любой вектор, 
+  добавляемый в commonMain composeResources/drawable/, нужно чистить от @-ссылок
+  на цвета (актуально, т.к. репозиторий — шаблон, клонируемый под каждого
+  клиента).
+
+✻ Sautéed for 1m 34s
+
+※ recap: Building out a KMP collecting app: set up theme, Circuit navigation, exported icon assets, and built animated Loading/NoConnection screens. Just fixed a vector-drawable crash by replacing an Android color reference with literal hex. Next: run the app to verify the screens render.
+
+❯ @"storage-helper-builder (agent)" создай объект StorageHelper для сохранения  
+  состояния приложения согласно требованиям агента, с поддержкой шифрования,    
+  сохранением строк и примитивов. @"kmp-camera-gallery-expert (agent)" нужно    
+  реализовать заготовки под камеру и галерею для обоих платформ                 
+
+● I'm in plan mode — I'll research and produce a plan, not execute. Both tasks
+  (KMP storage + camera/gallery scaffolds) touch DI, source-set structure,
+  dependencies, and platform permission manifests. Let me explore those in
+  parallel.
+
+● 2 Explore agents finished (ctrl+o to expand)
+   ├ Explore DI, settings, source sets · 0 tool uses
+   │ ⎿  Done
+   └ Explore manifests, permissions, deps · 0 tool uses
+     ⎿  Done
+
+● Excellent context. Key findings: multiplatform-settings (+coroutines, +no-arg)
+  and kotlinx-serialization are in commonMain but unused; Koin isn't
+  initialized; no encryption dep; Android has CAMERA permission but no
+  FileProvider; iOS Info.plist has placeholder camera/photo usage strings; iOS
+  min 15, Android minSdk 28 (PhotoPicker viable). There's a clean expect/actual
+  pattern already (Platform.kt, CommonParcelize).
+
+  Two design forks materially change what gets built — and one concerns the
+  storage-helper-builder agent being Android-specialized while this is a KMP
+  app:
+
+● User answered Claude's questions:
+  ⎿  · StorageHelper — на какие платформы? (агент storage-helper-builder заточен
+     под Android, но проект — KMP) → KMP-общий (обе платформы)
+     · Как реализовать шифрование в StorageHelper? → Нативное защищённое 
+     хранилище
+     · Глубина заготовок камеры/галереи? → используй 
+     PHPhotoLibrary.authorizationStatusForAccessLevel(PHAccessLevelReadWrite) 
+     для получения данных из галереи для айос
+
+● All decisions captured:
+  - StorageHelper: KMP-common (both platforms).
+  - Encryption: native secure storage (Android EncryptedSharedPreferences + iOS
+  Keychain).
+  - Camera/gallery: working pickers, and on iOS specifically use
+  PHPhotoLibrary.authorizationStatus(for: .readWrite) (PHAccessLevelReadWrite)
+  for gallery authorization.
+
+  Let me write the plan (overwriting the previous unrelated one).
+
+● Updated plan
+  ⎿  /plan to preview
+
+● User approved Claude's plan
+  ⎿  Plan saved to: ~/.claude/plans/transient-sprouting-moonbeam.md · /plan to 
+     edit
+     План: KMP StorageHelper (с шифрованием) + заготовки камеры/галереи (Android
+     + iOS)
+
+     Context
+
+     Приложение-коллекционирование на KMP (Android + iOS, пакет
+     com.trid.test.kmpsample). Нужно: (1) object StorageHelper для сохранения
+     состояния приложения — строки и примитивы, с поддержкой шифрования; (2)
+     рабочие заготовки выбора фото из камеры и галереи на обеих платформах.
+     Реализуют два профильных агента: storage-helper-builder и
+     kmp-camera-gallery-expert.
+
+     Исследование показало: multiplatform-settings (+-coroutines, +-no-arg) и
+     kotlinx-serialization (core+json) уже в commonMain, но НЕ используются;
+     плагин сериализации НЕ применён. Koin объявлен, но startKoin нигде не
+     вызывается. Шифрования нет. Есть чистый паттерн expect/actual (Platform.kt,
+     navigation/CommonParcelize.kt). Android: minSdk 28, targetSdk 36,
+     CAMERA-разрешение есть, FileProvider нет. iOS: min 15.0, в Info.plist есть
+     плейсхолдеры NSCameraUsageDescription и NSPhotoLibraryUsageDescription.
+
+     Решения (подтверждены пользователем)
+
+     - StorageHelper — KMP-общий (commonMain + expect/actual, обе платформы)
+     поверх multiplatform-settings.
+     - Шифрование — нативное защищённое хранилище: Android
+     EncryptedSharedPreferences (добавить androidx.security:security-crypto),
+     iOS KeychainSettings (уже есть в multiplatform-settings). Флаг encrypted.
+     - Камера/галерея — рабочие пикеры; на iOS галерея использует
+     PHPhotoLibrary.authorizationStatus(for: PHAccessLevelReadWrite) для
+     авторизации доступа.
+
+     Ключевые файлы (проверено)
+
+     - composeApp/build.gradle.kts — блоки зависимостей по source set; плагины
+     (применить kotlinSerialization).
+     - gradle/libs.versions.toml — каталог версий/артефактов.
+     - composeApp/src/androidMain/AndroidManifest.xml — разрешения,
+     <application> без android:name.
+     - iosApp/iosApp/Info.plist — usage-строки (плейсхолдеры).
+     - Паттерн expect/actual: commonMain/.../Platform.kt →
+     androidMain/.../Platform.android.kt → iosMain/.../Platform.ios.kt.
+
+     Порядок: ДВА АГЕНТА ПОСЛЕДОВАТЕЛЬНО
+
+     Оба правят общие файлы (build.gradle.kts, AndroidManifest.xml) → запускать
+     НЕ параллельно во избежание гонок. Сначала storage, верификация, затем
+     camera/gallery, верификация.
+
+     Шаг 1 — storage-helper-builder
+
+     Создать object StorageHelper в commonMain
+     (com.trid.test.kmpsample.storage):
+     - Типобезопасный API для строк и примитивов: putString/getString, putInt,
+     putLong, putBoolean, putFloat, putDouble (+ nullable-геттеры со значением
+     по умолчанию), remove, clear, contains. Каждый метод принимает encrypted: 
+     Boolean = false (либо два под-объекта default/secure).
+     - Опционально: inline fun <reified T> putObject/getObject через
+     kotlinx.serialization.json.Json (для сложных моделей) — требует применить
+     плагин kotlinSerialization в composeApp/build.gradle.kts.
+     - Бэкенд через internal expect fun createSettings(encrypted: Boolean): 
+     Settings (из com.russhwolf.settings):
+       - Android actual: plain → SharedPreferencesSettings/no-arg Settings();
+     encrypted → EncryptedSharedPreferences.create(...) (MasterKey AES256-GCM)
+     обёрнутый в SharedPreferencesSettings. Контекст приложения получить через 
+     авто-зарегистрированный no-op ContentProvider (или androidx.startup),
+     сохраняющий applicationContext в holder — чтобы StorageHelper оставался
+     object без init(context). ContentProvider добавить в AndroidManifest.xml.
+       - iOS actual: plain →
+     NSUserDefaultsSettings(NSUserDefaults.standardUserDefaults); encrypted →
+     KeychainSettings(service = "<bundle>.secure").
+     - Зависимости: добавить androidx.security:security-crypto (последняя
+     1.1.0-alphaXX) в libs.versions.toml + androidMain. KeychainSettings — без
+     новых зависимостей (в multiplatform-settings). Применить плагин
+     kotlinSerialization.
+     - commonMain/iOS-safe, без Koin (синглтон-object). Стиль репозитория,
+     чистые импорты.
+
+     Шаг 2 — kmp-camera-gallery-expert
+
+     Рабочие expect/actual-пикеры в commonMain (com.trid.test.kmpsample.media),
+     возвращающие снимок как ByteArray? (JPEG/PNG); идиоматично для Compose —
+     @Composable expect fun 
+     rememberCameraLauncher/rememberGalleryLauncher(onResult) либо контроллер.
+     Включить запрос разрешений.
+     - Android actual: галерея — ActivityResultContracts.PickVisualMedia
+     (PhotoPicker; activity-compose уже есть); камера — TakePicture +
+     FileProvider (добавить <provider> в манифест + res/xml/file_paths.xml).
+     CAMERA-разрешение уже есть.
+     - iOS actual (Kotlin/Native interop
+     platform.Photos/platform.UIKit/platform.AVFoundation): галерея —
+     PHPickerViewController, авторизация через
+     PHPhotoLibrary.authorizationStatus(for: PHAccessLevelReadWrite) и при
+     необходимости requestAuthorization(for:.readWrite); камера —
+     UIImagePickerController +
+     AVCaptureDevice.authorizationStatus/requestAccess. Презентация из корневого
+     rootViewController.
+     - Info.plist: заменить плейсхолдеры на осмысленный текст; при доступе
+     readWrite оставить NSPhotoLibraryUsageDescription, добавить
+     NSPhotoLibraryAddUsageDescription если будет запись в галерею.
+     - iOS-safe, без Koin.
+
+     Verification
+
+     - Компиляция обоих таргетов после КАЖДОГО шага:
+       - ./gradlew :composeApp:compileDebugKotlinAndroid
+       - ./gradlew :composeApp:compileKotlinIosSimulatorArm64
+     - Проверить слияние AndroidManifest.xml (ContentProvider + FileProvider
+     authority уникальны, не конфликтуют), наличие res/xml/file_paths.xml.
+     - Ревью: StorageHelper — корректные expect/actual, encrypted-путь реально
+     шифрует (EncryptedSharedPreferences/Keychain), нет утечки контекста;
+     камера/галерея — корректные платформенные API, запрос разрешений, возврат
+     байтов.
+     - Полная функциональная проверка (реальный пик/съёмка, round-trip
+     шифрования) — только на устройстве/симуляторе (desktop-таргета и
+     headless-рендера нет) — отметить пользователю.
+
+     Замечания / риски
+
+     - androidx.security:security-crypto помечен Google как deprecated, но
+     остаётся стандартом для EncryptedSharedPreferences; альтернативы в androidx
+     пока нет. Отметить пользователю.
+     - Бандл по умолчанию плейсхолдерный (com.test.bundle); Keychain service и
+     FileProvider authority завязать на текущий applicationId/${applicationId}.
+     - DI остаётся без изменений (StorageHelper — object); подключение к Koin —
+     отдельная будущая задача.
+● Plan approved. Executing sequentially (both agents edit shared files, so no
+  parallel). Step 1: storage-helper-builder.
+
+● storage-helper-builder(Build KMP encrypted StorageHelper)
+  ⎿  Done (23 tool uses · 41.1k tokens · 2m 56s)
+  (ctrl+o to expand)
+
+● Storage helper built. Let me verify both targets compile before moving to Step
+  2.
+
+● Bash(echo "=== ANDROID ===" && timeout 540 ./gradlew
+      :composeApp:compileDebugKotlinAndroid -q 2>&1 | grep -vE "^w: " | tail
+      -25; echo "ANDROID EXIT: ${PIPESTATUS[0]}…)
+  ⎿  === ANDROID ===
+     ANDROID EXIT:
+
+● Bash(echo "=== iOS ===" && timeout 540 ./gradlew
+      :composeApp:compileKotlinIosSimulatorArm64 -q 2>&1 | grep -vE "^w: " |
+      tail -25; echo "iOS EXIT: ${PIPESTATUS[0]}")
+  ⎿  === iOS ===
+     iOS EXIT:
+
+● Both targets compile clean. The agent left a deletable StorageHelperExample.kt
+  (unrequested demo code) — I'll remove it to keep the module clean, then
+  proceed.
+
+● Bash(rm -f composeApp/src/commonMain/kotlin/com/trid/test/kmpsample/storage/St
+      orageHelperExample.kt && echo "removed" && ls -1
+      composeApp/src/commonMain/kotlin/com/t…)
+  ⎿  removed
+     composeApp/src/androidMain/kotlin/com/trid/test/kmpsample/storage/:
+     StorageHelper.android.kt
+     … +6 lines (ctrl+o to expand)
+
+● Now Step 2: kmp-camera-gallery-expert.
+
+● kmp-camera-gallery-expert(Build KMP camera/gallery pickers)
+  ⎿  Done (57 tool uses · 63.5k tokens · 7m 1s)
+  (ctrl+o to expand)
+
+● Camera/gallery built. Final verification — compile both targets and check the
+  manifest/resources.
+
+● Bash(echo "=== ANDROID ===" && timeout 540 ./gradlew
+      :composeApp:compileDebugKotlinAndroid -q 2>&1 | grep -vE "^w: " | tail
+      -25; echo "ANDROID EXIT: ${PIPESTATUS[0]}…)
+  ⎿  === ANDROID ===
+     e: file:///home/kr0fff/AndroidStudioProjects/Work/5773/composeApp/src/
+     androidMain/kotlin/com/trid/test/kmpsample/media/MediaPicker.android.k
+     … +19 lines (ctrl+o to expand)
+
+● One Android compile error — PickVisualMedia launcher needs a
+  PickVisualMediaRequest wrapper, not the ImageOnly type directly. Let me look
+  and fix.
+
+  Read 1 file (ctrl+o to expand)
+
+● The fix: wrap the input in a PickVisualMediaRequest.
+
+● Update(composeApp/src/androidMain/kotlin/com/trid/test/kmpsample/media/MediaPi
+        cker.android.kt)
+  ⎿  Added 1 line
+       5  import android.content.pm.PackageManager
+       6  import android.net.Uri
+       7  import androidx.activity.compose.rememberLauncherForActivityRes
+          ult
+       8 +import androidx.activity.result.PickVisualMediaRequest         
+       9  import androidx.activity.result.contract.ActivityResultContract
+          s
+      10  import androidx.compose.runtime.Composable
+      11  import androidx.compose.runtime.mutableStateOf
+
+● Update(composeApp/src/androidMain/kotlin/com/trid/test/kmpsample/media/MediaPi
+        cker.android.kt)
+  ⎿  Added 1 line, removed 1 line
+      33  
+      34      return MediaPicker {
+      35          launcher.launch(
+      36 -            ActivityResultContracts.PickVisualMedia.ImageOnly, 
+      36 +            PickVisualMediaRequest(ActivityResultContracts.Pick
+         +VisualMedia.ImageOnly),                                        
+      37          )
+      38      }
+      39  }
+
+● Bash(echo "=== ANDROID ===" && timeout 540 ./gradlew
+      :composeApp:compileDebugKotlinAndroid -q 2>&1 | grep -vE "^w: " | tail
+      -20; echo "ANDROID EXIT: ${PIPESTATUS[0]}…)
+  ⎿  === ANDROID ===
+     ANDROID EXIT:
+
+● Android compiles now. Let me verify iOS (the Kotlin/Native interop is the
+  higher-risk part).
+
+● Bash(echo "=== iOS ===" && timeout 540 ./gradlew
+      :composeApp:compileKotlinIosSimulatorArm64 -q 2>&1 | grep -vE "^w: " |
+      tail -30; echo "iOS EXIT: ${PIPESTATUS[0]}")
+  ⎿  === iOS ===
+     iOS EXIT:
+
+● Both targets compile clean. Let me verify the manifest (both providers
+  coexist), the file_paths resource, and the Info.plist edits.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Both deliverables complete and both targets (Android + iOS) compile clean.
+  Providers coexist with unique authorities, file_paths.xml matches the capture
+  dir, and the iOS usage strings are now meaningful.
+
+  Готово ✅
+
+  1. object StorageHelper — KMP-общий, с шифрованием
+
+  com.trid.test.kmpsample.storage (commonMain + expect/actual):
+  - API: типизированные put/get (+ …OrNull) для String, Int, Long, Float,
+  Double, Boolean; remove, clear, contains; флаг encrypted: Boolean = false на
+  каждом методе. Плюс inline fun <reified T> putObject/getObject через
+  kotlinx.serialization.Json (decode обёрнут в runCatching → null при битых
+  данных).
+  - Бэкенд: internal expect fun createSettings(encrypted), два кэшированных
+  Settings (by lazy).
+    - Android: plain → SharedPreferencesSettings (app_storage); encrypted →
+  EncryptedSharedPreferences (app_storage_secure, MasterKey AES256-GCM).
+  Контекст — через авто-ContentProvider StorageInitProvider (authority
+  ${applicationId}.storageinitprovider), так что StorageHelper остаётся чистым
+  object без init().
+    - iOS: plain → NSUserDefaultsSettings; encrypted → KeychainSettings(service 
+  = "<bundleId>.secure").
+  - Зависимости: добавлен androidx.security:security-crypto 1.1.0-alpha06
+  (androidMain) + применён плагин kotlinSerialization. Keychain — без новых
+  зависимостей.
+  - Удалил оставленный агентом демо-файл StorageHelperExample.kt.
+
+  2. Камера + галерея — рабочие expect/actual пикеры
+
+  com.trid.test.kmpsample.media — @Composable 
+  rememberGalleryPicker/rememberCameraPicker(onResult: (ByteArray?) -> Unit): 
+  MediaPicker (launch()), возвращают JPEG-байты или null (отмена/отказ).
+  - Android: галерея — PhotoPicker (PickVisualMedia, без storage-разрешений);
+  камера — TakePicture через FileProvider (${applicationId}.fileprovider,
+  res/xml/file_paths.xml, cache camera_photos/) + runtime-запрос CAMERA.
+  (Поправил баг агента: launch() требует PickVisualMediaRequest-обёртку.)
+  - iOS: галерея — PHPickerViewController, авторизация именно через
+  PHPhotoLibrary.authorizationStatusForAccessLevel(PHAccessLevelReadWrite) +
+  requestAuthorizationForAccessLevel(.readWrite) (как просили); камера —
+  UIImagePickerController + AVCaptureDevice авторизация. NSData→ByteArray через
+  memcpy/usePinned.
+  - Info.plist: плейсхолдеры заменены осмысленным текстом.
+  NSPhotoLibraryAddUsageDescription НЕ добавлял — запись в галерею не
+  реализована (только чтение/выбор).
+
+  Замечания
+
+  - androidx.security:security-crypto помечен Google как deprecated, но остаётся
+  стандартом для EncryptedSharedPreferences (замены в androidx пока нет).
+  - DI не трогали: StorageHelper — object, пикеры — Composable. Подключение к
+  Koin — отдельная будущая задача.
+  - Реальную проверку (выбор/съёмка фото, round-trip шифрования, диалоги
+  разрешений) можно сделать только на устройстве/симуляторе — desktop-таргета и
+  headless-рендера в проекте нет.
+
+✻ Sautéed for 20m 58s
+
+❯ @"kmp-legal-links-presenter (agent)" Создай способ показа ссылок: Андроид -   
+  https://telegra.ph/Privacy-Policy-for-Collectra-06-01, IOS -                  
+  https://telegra.ph/Privacy-Policy-for-Nilexis-06-01;                          
+  https://telegra.ph/Terms-and-Conditions-for-Nilexis-06-01.                    
+● This is a new task (asymmetric per-platform legal links), so I'll replace the
+  old plan. Let me confirm there's no existing legal/URL-opening code and how
+  screens are structured.
+
+● Explore(Explore legal links integration points)
+  ⎿  Done (34 tool uses · 58.8k tokens · 1m 27s)
+  (ctrl+o to expand)
+
+● Confirmed green-field: no existing legal/URL code, HomeScreen is an empty
+  placeholder, expect/actual-functions convention, English UI text, and
+  LocalUriHandler is available cross-platform (so the asymmetry is only in which
+  links each platform shows — opening is uniform, no new deps).
+
+  One fork on where to surface the links:
+
+● User answered Claude's questions:
+  ⎿  · Куда подключить блок с юридическими ссылками? (набор ссылок разный по 
+     платформам через expect/actual, открытие — через LocalUriHandler) → 
+     Переиспользуемый компонент
+
+● Decision captured: standalone reusable composable + expect/actual link
+  provider, English labels, opened via LocalUriHandler. Writing the final plan.
+
+● Updated plan
+  ⎿  /plan to preview
+  ⎿  User rejected Claude's plan:
+     ╭─────────────────────────────────────────────────────────────────────────╮
+     │ План: показ юридических ссылок (асимметрично по платформам, KMP)        │
+     │                                                                         │
+     │ Context                                                                 │
+     │                                                                         │
+     │ KMP-приложение (Android + iOS, пакет com.trid.test.kmpsample). Нужен    │
+     │ способ показа юридических ссылок, при этом набор ссылок РАЗНЫЙ по       │
+     │ платформам:                                                             │
+     │ - Android: только Privacy Policy →                                      │
+     │ https://telegra.ph/Privacy-Policy-for-Collectra-06-01                   │
+     │ - iOS: Privacy Policy →                                                 │
+     │ https://telegra.ph/Privacy-Policy-for-Nilexis-06-01 И Terms →           │
+     │ https://telegra.ph/Terms-and-Conditions-for-Nilexis-06-01               │
+     │                                                                         │
+     │ Реализует профильный агент kmp-legal-links-presenter: expect/actual для │
+     │ платформенного набора ссылок + общий presentation-контракт +            │
+     │ переиспользуемый UI.                                                    │
+     │                                                                         │
+     │ Исследование: юридического/URL-кода нет (green-field). Конвенция в репо │
+     │ — expect/actual функции (-Xexpect-actual-classes не выставлен), пакет   │
+     │ com.trid.test.kmpsample. Текст UI — английский.                         │
+     │ androidx.compose.ui.platform.LocalUriHandler доступен кроссплатформенно │
+     │ (compose-ui в commonMain) → открытие URL единое, без новых              │
+     │ зависимостей и без expect/actual для открытия. Асимметрия — ТОЛЬКО в    │
+     │ наборе ссылок.                                                          │
+     │                                                                         │
+     │ Решения (подтверждены пользователем)                                    │
+     │                                                                         │
+     │ - Переиспользуемый компонент: самодостаточный @Composable LegalLinks()  │
+     │ + expect/actual провайдер ссылок. Никуда не вшивается — вставляется в   │
+     │ любой экран позже.                                                      │
+     │ - Метки — английские (как остальной UI): "Privacy Policy", "Terms &     │
+     │ Conditions".                                                            │
+     │ - Открытие — LocalUriHandler.current.openUri(url).                      │
+     │                                                                         │
+     │ Что делаем (1 агент: kmp-legal-links-presenter)                         │
+     │                                                                         │
+     │ Новый пакет com.trid.test.kmpsample.legal:                              │
+     │                                                                         │
+     │ 1. commonMain legal/LegalLinks.kt:                                      │
+     │   - data class LegalLink(val title: String, val url: String).           │
+     │   - Общий контракт набора ссылок: expect fun legalLinks():              │
+     │ List<LegalLink>.                                                        │
+     │   - @Composable fun LegalLinks(modifier: Modifier = Modifier) —         │
+     │ рендерит legalLinks() списком кликабельных пунктов; по тапу             │
+     │ LocalUriHandler.current.openUri(link.url). Стиль из темы                │
+     │ (MaterialTheme, AppAccent.Gold, типографика Cinzel/Nunito).             │
+     │ Самодостаточный, никуда не вшит.                                        │
+     │ 2. androidMain legal/LegalLinks.android.kt:                             │
+     │   - actual fun legalLinks() = listOf(LegalLink("Privacy Policy",        │
+     │ "https://telegra.ph/Privacy-Policy-for-Collectra-06-01"))               │
+     │ 3. iosMain legal/LegalLinks.ios.kt:                                     │
+     │   - actual fun legalLinks() = listOf(                                   │
+     │ LegalLink("Privacy Policy",                                             │
+     │ "https://telegra.ph/Privacy-Policy-for-Nilexis-06-01"),                 │
+     │ LegalLink("Terms & Conditions",                                         │
+     │ "https://telegra.ph/Terms-and-Conditions-for-Nilexis-06-01"))           │
+     │                                                                         │
+     │ Конвенция: expect/actual функции (не классы). commonMain/iOS-safe, без  │
+     │ Koin, без правок навигации/entry points. Стиль репозитория, чистые      │
+     │ импорты.                                                                │
+     │                                                                         │
+     │ Verification                                                            │
+     │                                                                         │
+     │ - Компиляция обоих таргетов:                                            │
+     │   - ./gradlew :composeApp:compileDebugKotlinAndroid                     │
+     │   - ./gradlew :composeApp:compileKotlinIosSimulatorArm64                │
+     │ - Ревью: Android-actual отдаёт ровно 1 ссылку (Collectra privacy),      │
+     │ iOS-actual — 2 ссылки (Nilexis privacy + terms); URL точно совпадают с  │
+     │ заданными; открытие через LocalUriHandler.                              │
+     │ - Визуальная проверка (рендер списка, открытие в браузере) — только на  │
+     │ устройстве/симуляторе; компонент можно временно вставить в HomeUi для   │
+     │ ручной проверки.                                                        │
+     │                                                                         │
+     │ Замечания                                                               │
+     │                                                                         │
+     │ - Android брендирован как «Collectra», iOS — как «Nilexis» (по          │
+     │ предоставленным URL) — так и заложено.                                  │
+     │ - Компонент нигде не подключён по умолчанию; чтобы увидеть — вставить   │
+     │ LegalLinks() в нужный экран (напр. будущий Settings или HomeUi).        │
+     ╰─────────────────────────────────────────────────────────────────────────╯
+
+● Good question — let me clarify the two behaviors so I plan the right thing.
+
+  By default the plan opens each link in the external browser (via Compose's
+  LocalUriHandler → Android opens a Chrome Custom Tab / default browser, iOS
+  opens Safari). But an in-app WebView is also possible. And the visual
+  presentation can vary. Let me confirm both:
+
+● User answered Claude's questions:
+  ⎿  · Как открывать ссылку при нажатии? → Внешний браузер
+     · Как визуально показывать ссылки? → Текстовые ссылки
+
+● Confirmed: external browser (LocalUriHandler) + clickable text links
+  (underlined gold, as a footer/block). Updating the plan and proceeding.
+
+● Updated plan
+  ⎿  /plan to preview
+
+● Updated plan
+  ⎿  /plan to preview
+
+● User approved Claude's plan
+  ⎿  Plan saved to: ~/.claude/plans/transient-sprouting-moonbeam.md · /plan to 
+     edit
+     План: показ юридических ссылок (асимметрично по платформам, KMP)
+
+     Context
+
+     KMP-приложение (Android + iOS, пакет com.trid.test.kmpsample). Нужен способ
+     показа юридических ссылок, при этом набор ссылок РАЗНЫЙ по платформам:
+     - Android: только Privacy Policy →
+     https://telegra.ph/Privacy-Policy-for-Collectra-06-01
+     - iOS: Privacy Policy → https://telegra.ph/Privacy-Policy-for-Nilexis-06-01
+     И Terms → https://telegra.ph/Terms-and-Conditions-for-Nilexis-06-01
+
+     Реализует профильный агент kmp-legal-links-presenter: expect/actual для
+     платформенного набора ссылок + общий presentation-контракт +
+     переиспользуемый UI.
+
+     Исследование: юридического/URL-кода нет (green-field). Конвенция в репо —
+     expect/actual функции (-Xexpect-actual-classes не выставлен), пакет
+     com.trid.test.kmpsample. Текст UI — английский.
+     androidx.compose.ui.platform.LocalUriHandler доступен кроссплатформенно
+     (compose-ui в commonMain) → открытие URL единое, без новых зависимостей и
+     без expect/actual для открытия. Асимметрия — ТОЛЬКО в наборе ссылок.
+
+     Решения (подтверждены пользователем)
+
+     - Переиспользуемый компонент: самодостаточный @Composable LegalLinks() +
+     expect/actual провайдер ссылок. Никуда не вшивается — вставляется в любой
+     экран позже.
+     - Метки — английские (как остальной UI): "Privacy Policy", "Terms &
+     Conditions".
+     - Открытие — внешний браузер через LocalUriHandler.current.openUri(url)
+     (Android: Custom Tab/браузер, iOS: Safari). Без in-app WebView, без новых
+     зависимостей.
+     - Вид — текстовые ссылки: кликабельный текст (подчёркнутый, золотой
+     AppAccent.Gold), столбиком/в ряд, как футер/блок. Не кнопки и не
+     строки-пункты.
+
+     Что делаем (1 агент: kmp-legal-links-presenter)
+
+     Новый пакет com.trid.test.kmpsample.legal:
+
+     1. commonMain legal/LegalLinks.kt:
+       - data class LegalLink(val title: String, val url: String).
+       - Общий контракт набора ссылок: expect fun legalLinks(): List<LegalLink>.
+       - @Composable fun LegalLinks(modifier: Modifier = Modifier) — рендерит
+     legalLinks() как кликабельные текстовые ссылки (подчёркнутый золотой текст
+     AppAccent.Gold, типографика Nunito/labelMedium), столбиком или в ряд
+     (футер/блок); по тапу LocalUriHandler.current.openUri(link.url) → внешний
+     браузер. Самодостаточный, никуда не вшит.
+     2. androidMain legal/LegalLinks.android.kt:
+       - actual fun legalLinks() = listOf(LegalLink("Privacy Policy", 
+     "https://telegra.ph/Privacy-Policy-for-Collectra-06-01"))
+     3. iosMain legal/LegalLinks.ios.kt:
+       - actual fun legalLinks() = listOf(
+     LegalLink("Privacy Policy", 
+     "https://telegra.ph/Privacy-Policy-for-Nilexis-06-01"),
+     LegalLink("Terms & Conditions", 
+     "https://telegra.ph/Terms-and-Conditions-for-Nilexis-06-01"))
+
+     Конвенция: expect/actual функции (не классы). commonMain/iOS-safe, без
+     Koin, без правок навигации/entry points. Стиль репозитория, чистые импорты.
+
+     Verification
+
+     - Компиляция обоих таргетов:
+       - ./gradlew :composeApp:compileDebugKotlinAndroid
+       - ./gradlew :composeApp:compileKotlinIosSimulatorArm64
+     - Ревью: Android-actual отдаёт ровно 1 ссылку (Collectra privacy),
+     iOS-actual — 2 ссылки (Nilexis privacy + terms); URL точно совпадают с
+     заданными; открытие через LocalUriHandler.
+     - Визуальная проверка (рендер списка, открытие в браузере) — только на
+     устройстве/симуляторе; компонент можно временно вставить в HomeUi для
+     ручной проверки.
+
+     Замечания
+
+     - Android брендирован как «Collectra», iOS — как «Nilexis» (по
+     предоставленным URL) — так и заложено.
+     - Компонент нигде не подключён по умолчанию; чтобы увидеть — вставить
+     LegalLinks() в нужный экран (напр. будущий Settings или HomeUi).
+
+● Plan approved. Launching the kmp-legal-links-presenter agent.
+
+● kmp-legal-links-presenter(Build per-platform legal links)
+  ⎿  Done (17 tool uses · 34.0k tokens · 1m 19s)
+  (ctrl+o to expand)
+
+● Files created. Verifying both targets compile.
+
+● Bash(echo "=== ANDROID ===" && timeout 540 ./gradlew
+      :composeApp:compileDebugKotlinAndroid -q 2>&1 | grep -vE "^w: " | tail
+      -15; echo "ANDROID EXIT: ${PIPESTATUS[0]}…)
+  ⎿  === ANDROID ===
+     ANDROID EXIT:
+     === iOS ===
+     iOS EXIT:
+
+● Готово ✅ — оба таргета (Android + iOS) компилируются чисто.
+
+  Способ показа юридических ссылок (асимметрично по платформам)
+
+  Новый пакет com.trid.test.kmpsample.legal, паттерн expect/actual — набор
+  ссылок определяется платформой, открытие единое:
+
+  commonMain — LegalLinks.kt
+  - data class LegalLink(title, url)
+  - expect fun legalLinks(): List<LegalLink>
+  - @Composable fun LegalLinks(modifier) — рендерит ссылки как кликабельный 
+  подчёркнутый золотой текст (AppAccent.Gold, labelMedium), столбиком по центру;
+  по тапу LocalUriHandler.current.openUri(url) → внешний браузер (Android:
+  ACTION_VIEW/Custom Tab, iOS: Safari). Список стабилизирован через remember { 
+  legalLinks() }.
+
+  androidMain — LegalLinks.android.kt → 1 ссылка:
+  - Privacy Policy → https://telegra.ph/Privacy-Policy-for-Collectra-06-01
+
+  iosMain — LegalLinks.ios.kt → 2 ссылки:
+  - Privacy Policy → https://telegra.ph/Privacy-Policy-for-Nilexis-06-01
+  - Terms & Conditions →
+  https://telegra.ph/Terms-and-Conditions-for-Nilexis-06-01
+
+  Асимметрия чисто декларативная: Terms просто отсутствует в Android-actual —
+  без null-проверок и рантайм-условий. Без новых зависимостей, без Koin,
+  навигацию не трогали.
+
+  Использование (вставить в любой экран):
+  LegalLinks(modifier = Modifier.padding(vertical = 16.dp))
+
+  Замечания:
+  - Компонент нигде не подключён по умолчанию — чтобы увидеть, вставьте
+  LegalLinks() в нужный экран (напр. будущий Settings или временно в HomeUi).
+  - Реальное открытие в браузере проверяется только на устройстве/симуляторе.
+  - Бандл по-прежнему плейсхолдерный (com.test.bundle); сами URL завязаны на
+  бренды Collectra (Android) / Nilexis (iOS) — как вы и задали.
+
+✻ Worked for 7m 29s
+
+❯ Для чего StorageInitProvider, почему не через коин? Выглядит странно, зачем   
+  регистрировать в манифесте?                                                   
+
+● Good question — let me look at the actual implementation so I explain it
+  accurately, then lay out the options.
+
+  Read 2 files (ctrl+o to expand)
+● Now I can explain it precisely.
+
+  Что делает StorageInitProvider и зачем
+
+  EncryptedSharedPreferences (и вообще SharedPreferences) на Android требует
+  Context. А StorageHelper сделан как no-arg object (вы просили «объект
+  StorageHelper») — у синглтона-объекта нет способа самому достать Context.
+
+  StorageInitProvider — это пустой ContentProvider, который Android сам 
+  инстанцирует на самом раннем старте процесса (до Application.onCreate), и в
+  его onCreate мы просто сохраняем applicationContext в холдер. Регистрация в
+  манифесте — единственный способ сказать фреймворку «создай этот провайдер».
+  Данных он не хранит, это чистый трюк захвата контекста.
+
+  Это не самодельная экзотика — ровно так работают Firebase, WorkManager,
+  LeakCanary и сам androidx App Startup.더 того: multiplatform-settings-no-arg,
+  который у вас в зависимостях, под капотом делает то же самое (мержит свой
+  ContentProvider/Startup-инициализатор), просто прячет это от вас.
+
+  Почему не через Koin
+
+  Два момента:
+  1. Koin в проекте не инициализирован — startKoin нигде не вызывается (мы это
+  сознательно откладывали в задачах навигации/хранилища, чтобы не трогать точки
+  входа обеих платформ).
+  2. Koin сам по себе проблему контекста не решает — вам всё равно нужно
+  скормить Android Context в Koin через startKoin { androidContext(...) }, а это
+  вызов из Application/MainActivity. То есть Koin не убирает «откуда взять
+  контекст», а лишь переносит это в точку входа.
+
+  ContentProvider же даёт контекст вообще без правки точек входа — поэтому агент
+  и выбрал его.
+
+  Варианты
+
+  Всё рабочее и компилируется, но раз дизайн смущает — есть три направления. Что
+  предпочитаете?
+
+● User answered Claude's questions:
+  ⎿  · Как получать Android Context для StorageHelper? → Koin (правильный DI)
+
+● Понял — переходим на нормальный DI через Koin. Это уберёт StorageInitProvider
+  и запись в манифесте, а контекст придёт через androidContext(). Запишу план.
+
+● Updated plan
+  ⎿  /plan to preview
+
+● User approved Claude's plan
+  ⎿  Plan saved to: ~/.claude/plans/transient-sprouting-moonbeam.md · /plan to 
+     edit
+     План: перевести StorageHelper на Koin DI (убрать ContentProvider)
+
+     Context
+
+     В StorageHelper Android-контекст для EncryptedSharedPreferences сейчас
+     добывается через StorageInitProvider (пустой ContentProvider,
+     зарегистрированный в манифесте) — рабочий, но «магический» паттерн.
+     Пользователь предпочёл правильный DI. Koin уже в зависимостях
+     (koin-core/-compose/-compose-viewmodel в commonMain, koin-android в
+     androidMain), но startKoin нигде не вызывается. Переводим хранилище на
+     Koin: инициализируем Koin в обеих точках входа, Context берём через
+     androidContext(), StorageInitProvider и запись в манифесте удаляем.
+
+     Решение (подтверждено пользователем: «Koin (правильный DI)»)
+
+     Абстрагируем создание Settings за SettingsFactory, которую отдаёт
+     платформенный Koin-модуль; StorageHelper становится классом-синглтоном из
+     Koin (сохраняя весь текущий API и ленивую схему двух хранилищ).
+
+     Изменения
+
+     commonMain
+
+     - storage/StorageHelper.kt:
+       - fun interface SettingsFactory { fun create(encrypted: Boolean): 
+     Settings }.
+       - object StorageHelper → class StorageHelper(private val factory: 
+     SettingsFactory); plainSettings/encryptedSettings = by lazy { 
+     factory.create(...) }. Весь публичный API (put/get/…OrNull,
+     putObject/getObject, remove/clear/contains) сохраняется как методы
+     экземпляра.
+       - Удалить internal expect fun createSettings(encrypted).
+     - di/Koin.kt (новый):
+       - expect fun platformStorageModule(): Module — отдаёт SettingsFactory.
+       - val storageModule = module { single { StorageHelper(get()) } }.
+       - fun initKoin(appDeclaration: KoinAppDeclaration = {}) { if 
+     (GlobalContext.getOrNull() == null) startKoin { appDeclaration(); 
+     modules(platformStorageModule(), storageModule) } } (guard от двойного
+     старта).
+
+     androidMain
+
+     - di/Koin.android.kt (новый): actual fun platformStorageModule() = module {
+     single<SettingsFactory> { val ctx = androidContext(); SettingsFactory { 
+     encrypted -> ...EncryptedSharedPreferences(MasterKey AES256-GCM) либо 
+     getSharedPreferences..., обёрнутые в SharedPreferencesSettings } } } —
+     переносит сюда логику из старого StorageHelper.android.kt.
+     - MainApplication.kt (новый): class MainApplication : Application() { 
+     override fun onCreate() { super.onCreate(); initKoin { 
+     androidContext(this@MainApplication) } } }.
+     - Удалить storage/StorageHelper.android.kt (ContentProvider +
+     AppContextHolder + createSettings).
+     - AndroidManifest.xml: убрать <provider …StorageInitProvider …>; добавить в
+     <application> атрибут
+     android:name="com.trid.test.kmpsample.MainApplication" (FQN — rebundle
+     переписывает консистентно). FileProvider для камеры НЕ трогать.
+
+     iosMain
+
+     - di/Koin.ios.kt (новый): actual fun platformStorageModule() = module { 
+     single<SettingsFactory> { SettingsFactory { encrypted -> if (encrypted) 
+     KeychainSettings(service="<bundle>.secure") else 
+     NSUserDefaultsSettings(NSUserDefaults.standardUserDefaults) } } }.
+     - Удалить storage/StorageHelper.ios.kt.
+     - MainViewController.kt: вызвать initKoin() (guard внутри initKoin) до
+     ComposeUIViewController { App() }.
+
+     Потребители
+
+     Сейчас потребителей StorageHelper нет (демо-файл удалён ранее) — менять
+     вызовы не нужно. В будущем получать через koinInject<StorageHelper>()
+     (koin-compose) или getKoin().get<StorageHelper>().
+
+     Что НЕ трогаем
+
+     - Навигацию/Circuit (он остаётся на remember { buildAppCircuit() };
+     миграция Circuit на Koin — отдельная задача).
+     - Камеру/галерею, legal links, тему.
+
+     Verification
+
+     - Компиляция обоих таргетов:
+       - ./gradlew :composeApp:compileDebugKotlinAndroid
+       - ./gradlew :composeApp:compileKotlinIosSimulatorArm64
+     - Ревью: StorageInitProvider/AppContextHolder удалены; в манифесте нет
+     провайдера хранилища, но есть MainApplication и сохранён FileProvider; Koin
+     стартует один раз на процесс (Android — Application.onCreate; iOS — guard
+     в initKoin).
+     - Полная проверка (round-trip шифрования, что androidContext доступен) — на
+     устройстве/симуляторе.
+
+     Замечания
+
+     - MainApplication регистрируется по FQN, т.к. applicationId
+     (com.test.bundle) ≠ package класса (com.trid.test.kmpsample); это
+     согласуется с тем, как в манифесте уже прописан MainActivity.
+     - androidx.security:security-crypto остаётся (Google-deprecated, но
+     стандарт) — без изменений.
+
+● Let me read the files I'll modify/replace.
+
+  Read 4 files (ctrl+o to expand)
+
+● All clear. Implementing now. First the common StorageHelper (class +
+  SettingsFactory, drop the expect).
+
+● Write(composeApp/src/commonMain/kotlin/com/trid/test/kmpsample/storage/Storage
+       Helper.kt)
+  ⎿  Added 14 lines, removed 8 lines
+       7  import kotlinx.serialization.json.Json
+       8  
+       9  /**
+      10 - * Creates the platform-specific [Settings] backing store.     
+      10 + * Creates the platform-specific [Settings] backing store. Supp
+         +lied by the                                                    
+      11 + * platform Koin module (see `di/Koin.kt`):                    
+      12 + * - Android: plain `SharedPreferences` / [androidx.security.cr
+         +ypto.EncryptedSharedPreferences]                               
+      13 + * - iOS: `NSUserDefaults` / Keychain                          
+      14   *
+      12 - * @param encrypted when `true`, returns a store backed by plat
+         -form encryption                                                
+      13 - * (Android [androidx.security.crypto.EncryptedSharedPreference
+         -s], iOS Keychain);                                             
+      14 - * when `false`, returns a plain store (Android `SharedPreferen
+         -ces`, iOS `NSUserDefaults`).                                   
+      15 + * @param encrypted when `true`, returns a store backed by plat
+         +form encryption.                                               
+      16   */
+      16 -internal expect fun createSettings(encrypted: Boolean): Setting
+         -s                                                              
+      17 +fun interface SettingsFactory {                                
+      18 +    fun create(encrypted: Boolean): Settings                   
+      19 +}                                                              
+      20  
+      21  /**
+      22   * Type-safe, cross-platform persistence for app state.
+     ...
+      27   * Every method takes an [encrypted] flag that routes the read/
+          write to either a
+      28   * plain store or a platform-encrypted store. The two stores ar
+          e independent: a key
+      29   * written with `encrypted = true` is not visible with `encrypt
+          ed = false`.
+      30 + *                                                             
+      31 + * Provided as a singleton through Koin (`single { StorageHelpe
+         +r(get()) }`); obtain it                                        
+      32 + * with `koinInject<StorageHelper>()` (koin-compose) or `getKoi
+         +n().get<StorageHelper>()`.                                     
+      33   */
+      28 -object StorageHelper {                                         
+      34 +class StorageHelper(private val factory: SettingsFactory) {    
+      35  
+      30 -    private val plainSettings: Settings by lazy { createSetting
+         -s(encrypted = false) }                                         
+      31 -    private val encryptedSettings: Settings by lazy { createSet
+         -tings(encrypted = true) }                                      
+      36 +    private val plainSettings: Settings by lazy { factory.creat
+         +e(encrypted = false) }                                         
+      37 +    private val encryptedSettings: Settings by lazy { factory.c
+         +reate(encrypted = true) }                                      
+      38  
+      39      private val json: Json = Json {
+      40          ignoreUnknownKeys = true
+
+● Now the common Koin file, then delete the old platform StorageHelper files and
+  create the platform Koin modules + MainApplication.
+
+● Write(composeApp/src/commonMain/kotlin/com/trid/test/kmpsample/di/Koin.kt)
+  ⎿  Wrote 37 lines to
+     composeApp/src/commonMain/kotlin/com/trid/test/kmpsample/di/Koin.kt
+       1 package com.trid.test.kmpsample.di
+       2 
+       3 import com.trid.test.kmpsample.storage.StorageHelper
+       4 import org.koin.core.context.GlobalContext
+       5 import org.koin.core.context.startKoin
+       6 import org.koin.core.module.Module
+       7 import org.koin.dsl.KoinAppDeclaration
+       8 import org.koin.dsl.module
+       9 
+      10 /**
+     … +33 lines (ctrl+o to expand)
+
+● Bash(rm -f composeApp/src/androidMain/kotlin/com/trid/test/kmpsample/storage/S
+      torageHelper.android.kt
+      composeApp/src/iosMain/kotlin/com/trid/test/kmpsample/storage/S…)
+  ⎿  deleted old platform StorageHelper files
+
+● Write(composeApp/src/androidMain/kotlin/com/trid/test/kmpsample/di/Koin.androi
+       d.kt)
+  ⎿  Wrote 41 lines to composeApp/src/androidMain/kotlin/com/trid/test/kmps
+     ample/di/Koin.android.kt
+       1 package com.trid.test.kmpsample.di
+       2 
+       3 import android.content.Context
+       4 import androidx.security.crypto.EncryptedSharedPreferences
+       5 import androidx.security.crypto.MasterKey
+       6 import com.russhwolf.settings.SharedPreferencesSettings
+       7 import com.trid.test.kmpsample.storage.SettingsFactory
+       8 import org.koin.android.ext.koin.androidContext
+       9 import org.koin.core.module.Module
+      10 import org.koin.dsl.module
+     … +36 lines (ctrl+o to expand)
+
+● Write(composeApp/src/androidMain/kotlin/com/trid/test/kmpsample/MainApplicatio
+       n.kt)
+  ⎿  Wrote 18 lines to composeApp/src/androidMain/kotlin/com/trid/test/kmps
+     ample/MainApplication.kt
+       2 package com.trid.test.kmpsample
+       3 import android.app.Application
+       4 import com.trid.test.kmpsample.di.initKoin
+       5 import org.koin.android.ext.koin.androidContext
+       6 
+       8  * Application entry point. Initializes Koin once per process, f
+         eeding the
+       9  * application [Context] into the DI graph via `androidContext(.
+         ..)`.
+      10  */
+     … +10 lines (ctrl+o to expand)
+
+● Now the iOS Koin module and entry-point wiring.
+
+● Write(composeApp/src/iosMain/kotlin/com/trid/test/kmpsample/di/Koin.ios.kt)
+  ⎿  Wrote 35 lines to
+     composeApp/src/iosMain/kotlin/com/trid/test/kmpsample/di/Koin.ios.kt
+       1 package com.trid.test.kmpsample.di
+       2 
+       3 import com.russhwolf.settings.ExperimentalSettingsImplementation
+       4 import com.russhwolf.settings.KeychainSettings
+       5 import com.russhwolf.settings.NSUserDefaultsSettings
+       6 import com.trid.test.kmpsample.storage.SettingsFactory
+       7 import org.koin.core.module.Module
+       8 import org.koin.dsl.module
+       9 import platform.Foundation.NSBundle
+      10 import platform.Foundation.NSUserDefaults
+     … +30 lines (ctrl+o to expand)
+
+● Write(composeApp/src/iosMain/kotlin/com/trid/test/kmpsample/MainViewController
+       .kt)
+  ⎿  Added 5 lines, removed 1 line
+      1  package com.trid.test.kmpsample
+      2  
+      3  import androidx.compose.ui.window.ComposeUIViewController
+      4 +import com.trid.test.kmpsample.di.initKoin                      
+      5  
+      5 -fun MainViewController() = ComposeUIViewController { App() }    
+      6   No newline at end of file
+      7 +fun MainViewController() = ComposeUIViewController {            
+      8 +    initKoin()                                                  
+      9 +    App()                                                       
+      10 +}                                                               
+
+● Now the manifest: remove the StorageInitProvider and register MainApplication.
+
+● Update(composeApp/src/androidMain/AndroidManifest.xml)
+  ⎿  Added 1 line, removed 6 lines
+       8      <uses-feature android:name="android.hardware.camera" androi
+          d:required="false" />
+       9  
+      10      <application
+      11 +        android:name="com.trid.test.kmpsample.MainApplication" 
+      12          android:usesCleartextTraffic="true"
+      13          android:allowBackup="false"
+      14          android:icon="@mipmap/ic_launcher"
+     ...
+      17          android:supportsRtl="true"
+      18          android:theme="@android:style/Theme.Material.Light.NoAc
+          tionBar">
+      19  
+      19 -        <provider                                              
+      20 -            android:name="com.trid.test.kmpsample.storage.Stora
+         -geInitProvider"                                                
+      21 -            android:authorities="${applicationId}.storageinitpr
+         -ovider"                                                        
+      22 -            android:exported="false"                           
+      23 -            android:initOrder="100" />                         
+      24 -                                                               
+      20          <!--
+      21              FileProvider used exclusively by rememberCameraPick
+          er to expose a
+      22              temp capture file to the camera app via a content:/
+          / URI.
+
+● Now compile both targets.
+
+● Bash(echo "=== ANDROID ===" && timeout 540 ./gradlew
+      :composeApp:compileDebugKotlinAndroid -q 2>&1 | grep -vE "^w: " | tail
+      -20; echo "ANDROID EXIT: ${PIPESTATUS[0]}…)
+  ⎿  === ANDROID ===
+     ANDROID EXIT:
+
+● Bash(echo "=== iOS ===" && timeout 540 ./gradlew
+      :composeApp:compileKotlinIosSimulatorArm64 -q 2>&1 | grep -vE "^w: " |
+      tail -20; echo "iOS EXIT: ${PIPESTATUS[0]}")
+  ⎿  === iOS ===
+     e: file:///home/kr0fff/AndroidStudioProjects/Work/5773/composeApp/src/
+     commonMain/kotlin/com/trid/test/kmpsample/di/Koin.kt:4:30 Unresolved r
+     … +20 lines (ctrl+o to expand)
+● GlobalContext resolves on JVM but not in the native klib. Let me find the
+  correct cross-platform symbol in the Koin artifacts.
+
+● Bash(cd /home/kr0fff && find ~/.gradle/caches ~/.konan -path '*koin-core*'
+      -name '*.klib' 2>/dev/null | grep -iE 'ios|native|simulator' | head; echo
+      "--- search Glob…)
+  ⎿  /home/kr0fff/.gradle/caches/modules-2/files-2.1/io.insert-koin/koin-co
+     re-iossimulatorarm64/4.2.1/7239f69f35e160176c394cfc81937316ab64c53c/ko
+     in-core-iosSimulatorArm64Main-4.2.1.klib
+     … +261 lines (ctrl+o to expand)
+  ⎿  Shell cwd was reset to /home/kr0fff/AndroidStudioProjects/Work/5773
+
+● The native klib exposes org.koin.mp.KoinPlatform.getKoinOrNull() (the
+  cross-platform accessor) rather than a top-level GlobalContext object.
+  Switching the guard to that.
+
+● Update(composeApp/src/commonMain/kotlin/com/trid/test/kmpsample/di/Koin.kt)
+  ⎿  Added 1 line, removed 1 line
+       1  package com.trid.test.kmpsample.di
+       2  
+       3  import com.trid.test.kmpsample.storage.StorageHelper
+       4 -import org.koin.core.context.GlobalContext                     
+       4  import org.koin.core.context.startKoin
+       5  import org.koin.core.module.Module
+       6  import org.koin.dsl.KoinAppDeclaration
+       7  import org.koin.dsl.module
+       8 +import org.koin.mp.KoinPlatform                                
+       9  
+      10  /**
+      11   * Provides the platform-specific [com.trid.test.kmpsample.stor
+          age.SettingsFactory]
+
+● Update(composeApp/src/commonMain/kotlin/com/trid/test/kmpsample/di/Koin.kt)
+  ⎿  Added 3 lines, removed 3 lines
+      23  
+      24  /**
+      25   * Starts Koin once per process. Safe to call from each platfor
+          m entry point:
+      26 - * the [GlobalContext] guard makes repeat calls (e.g. an iOS vi
+         -ew controller being                                            
+      27 - * recreated) a no-op.                                         
+      26 + * the [KoinPlatform.getKoinOrNull] guard makes repeat calls (e
+         +.g. an iOS view                                                
+      27 + * controller being recreated) a no-op.                        
+      28   *
+      29   * @param appDeclaration platform hook — Android passes `androi
+          dContext(...)` here.
+      30   */
+      31  fun initKoin(appDeclaration: KoinAppDeclaration = {}) {
+      32 -    if (GlobalContext.getOrNull() != null) return              
+      32 +    if (KoinPlatform.getKoinOrNull() != null) return           
+      33      startKoin {
+      34          appDeclaration()
+      35          modules(platformStorageModule(), storageModule)
+
+● Bash(echo "=== iOS ===" && timeout 540 ./gradlew
+      :composeApp:compileKotlinIosSimulatorArm64 -q 2>&1 | grep -vE "^w: " |
+      tail -20; echo "iOS EXIT: ${PIPESTATUS[0]}";…)
+  ⎿  === iOS ===
+     iOS EXIT:
+     === ANDROID ===
+     ANDROID EXIT:
+
+● Both targets compile. Final check — confirm no dangling references to the
+  removed StorageInitProvider/createSettings and the manifest is correct.
+
+  Listed 1 directory (ctrl+o to expand)
+
+● Готово ✅ — StorageHelper переведён на Koin DI, StorageInitProvider удалён.
+  Оба таргета (Android + iOS) компилируются чисто, dangling-ссылок нет.
+
+  Что изменилось
+
+  Почему так лучше: контекст для EncryptedSharedPreferences теперь приходит
+  через androidContext() из Koin — никакой «магии» с ContentProvider и записи в
+  манифесте.
+
+  commonMain:
+  - storage/StorageHelper.kt — object → class StorageHelper(factory: 
+  SettingsFactory), весь API сохранён (методы стали инстансными). Добавлен fun 
+  interface SettingsFactory { fun create(encrypted): Settings }. expect fun 
+  createSettings удалён.
+  - di/Koin.kt (новый) — expect fun platformStorageModule(), storageModule = 
+  module { single { StorageHelper(get()) } }, initKoin(appDeclaration) с guard
+  от двойного старта через KoinPlatform.getKoinOrNull().
+
+  androidMain:
+  - di/Koin.android.kt (новый) — SettingsFactory берёт androidContext() и строит
+  plain/EncryptedSharedPreferences (логика перенесена из удалённого файла).
+  - MainApplication.kt (новый) — initKoin { androidContext(this) } в onCreate
+  (один раз на процесс).
+  - storage/StorageHelper.android.kt — удалён (ContentProvider,
+  AppContextHolder, createSettings).
+  - AndroidManifest.xml — убран <provider StorageInitProvider>, добавлен
+  android:name="com.trid.test.kmpsample.MainApplication". FileProvider камеры не
+  тронут.
+
+  iosMain:
+  - di/Koin.ios.kt (новый) — SettingsFactory: Keychain / NSUserDefaults.
+  - storage/StorageHelper.ios.kt — удалён.
+  - MainViewController.kt — initKoin() (guard внутри) перед App().
+
+  Использование: koinInject<StorageHelper>() (в composable) или
+  getKoin().get<StorageHelper>(). Текущих потребителей нет — менять нечего.
+
+  Замечания:
+  - Это первая реальная инициализация Koin в проекте. Навигацию/Circuit не
+  трогал — он по-прежнему на remember { buildAppCircuit() }; миграцию Circuit на
+  Koin можно сделать отдельно.
+  - MainApplication зарегистрирован по FQN (как и MainActivity), т.к.
+  applicationId ≠ package; rebundle переписывает консистентно.
+  - Реальную проверку (round-trip шифрования) — на устройстве/симуляторе.
+
+✻ Brewed for 8m 13s
+
+❯ @"android-screen-planner (agent)" реализуем план приложения: 1. Dashboard     
+                                                                                
+  Главный экран.                                                                
+                                                                                
+  Показывает:                                                                   
+                                                                                
+  количество артефактов                                                         
+  количество коллекций                                                          
+  избранное                                                                     
+  общую оценочную стоимость                                                     
+                                                                                
+  Блоки:                                                                        
+                                                                                
+  147 Artifacts                                                                 
+  8 Collections                                                                 
+  23 Favorites                                                                  
+  $4,820 Value                                                                  
+                                                                                
+  Также можно вывести последние добавленные предметы.                           
+                                                                                
+  2. Collections                                                                
+                                                                                
+  Список коллекций.                                                             
+                                                                                
+  Coins                                                                         
+  Minerals                                                                      
+  Books                                                                         
+  Figurines                                                                     
+  Cards                                                                         
+                                                                                
+  Каждая карточка:                                                              
+                                                                                
+  иконка                                                                        
+  количество предметов                                                          
+  превью                                                                        
+                                                                                
+  Нажатие открывает список артефактов коллекции.                                
+                                                                                
+  3. Artifact Details                                                           
+                                                                                
+  Основной экран приложения.                                                    
+                                                                                
+  Здесь:                                                                        
+                                                                                
+  фотографии                                                                    
+  описание                                                                      
+  категория                                                                     
+  редкость                                                                      
+  состояние                                                                     
+  стоимость                                                                     
+  место хранения                                                                
+  теги                                                                          
+                                                                                
+  Используются:                                                                 
+                                                                                
+  Chips                                                                         
+  Slider                                                                        
+  RadioButton                                                                   
+  Dialog                                                                        
+  4. Add Artifact                                                               
+                                                                                
+  Отдельный экран создания.                                                     
+                                                                                
+  Использует почти весь Material3:                                              
+                                                                                
+  TextField                                                                     
+  Dropdown                                                                      
+  Slider                                                                        
+  Switch                                                                        
+  RadioButton                                                                   
+  DatePicker                                                                    
+                                                                                
+  И главное:                                                                    
+                                                                                
+  📷 Камера                                                                     
+                                                                                
+  🖼️ Галерея                                                                    
+                                                                                
+  Для выполнения требований по permissions.                                     
+                                                                                
+  5. Showcase                                                                   
+                                                                                
+  Витрина коллекции.                                                            
+                                                                                
+  Красивый Grid из избранных предметов.                                         
+                                                                                
+  Можно сделать сортировку:                                                     
+                                                                                
+  By Rarity                                                                     
+  By Value                                                                      
+  By Date                                                                       
+                                                                                
+  И поиск.                                                                      
+                                                                                
+  Если нужен шестой экран                                                       
+  Analytics                                                                     
+                                                                                
+  Статистика:                                                                   
+                                                                                
+  распределение по категориям                                                   
+  самые дорогие предметы                                                        
+  количество по редкости                                                        
+                                                                                
+  Но я бы для простоты встроил статистику прямо в Dashboard.                    
+                                                                                
+  Итого                                                                         
+                                                                                
+  Получается очень компактная структура:                                        
+                                                                                
+  Dashboard                                                                     
+  Collections                                                                   
+  Artifact Details                                                              
+  Add Artifact                                                                  
+  Showcase                                                                      
+                                                                                
+  Всего 5 экранов, при этом:                                                    
+                                                                                
+  есть камера;                                                                  
+  есть галерея;                                                                 
+  много Material3 компонентов;                                                  
+  легко реализуется локально без сервера;                                       
+  египетская тематика через "Vault", "Relics", "Artifacts" выглядит             
+  естественно.. @"android-ui-composer (agent)" реализовуй подходящие            
+  /material-3-skill компоненты, адаптивные и отзывчивые экраны.                 
+  @"kotlin-multiplatform-expert (agent)" привязать существующие реализации под  
+  камеру, галерею, legal links.                                                 
+
+● This is a large feature — a full 5-screen app on top of the existing Circuit +
+  theme + storage/media/legal scaffolding. Let me confirm the exact contracts
+  I'll hand to the agents (navigation host, guarded navigator, scaffold wrapper,
+  media/legal/storage APIs, and the screen registry).
+
+  Read 6 files (ctrl+o to expand)
+
+● I now have all the contracts (Circuit data object screens + @CommonParcelize,
+  LocalGuardedNavigator for UI navigation, RootScaffold with top/bottom-bar
+  slots, StorageHelper via Koin with putObject/getObject,
+  rememberGalleryPicker/rememberCameraPicker → ByteArray?, LegalLinks()).
+  Currently Loading never advances and HomeScreen is empty — so wiring is needed
+  to make the app run.
+
+  This is a big build. Three forks materially shape the architecture before I
+  hand work to the agents:
+
+● User answered Claude's questions:
+  ⎿  · Какая навигация между основными экранами (Dashboard / Collections / 
+     Showcase)? → Dashboard-хаб
+     · С какими данными запускать приложение? → Сид-данные при первом запуске
+     · Куда ведёт нажатие на коллекцию (список артефактов коллекции)? → 
+     Отдельный экран-список
+
+● All three decisions captured:
+  - Navigation: Dashboard-hub (no bottom bar; navigate via cards/buttons, back
+  via system back).
+  - Data: seed on first run (collections + artifacts; stats computed; persisted
+  in StorageHelper).
+  - Collection tap: dedicated CollectionArtifacts list screen.
+
+  Writing the final plan.
+
+● Updated plan
+  ⎿  /plan to preview
+  ⎿  User rejected Claude's plan:
+     ╭─────────────────────────────────────────────────────────────────────────╮
+     │ План: реализация приложения-коллекционера (5–6 экранов) на существующем │
+     │ KMP/Circuit-скелете                                                     │
+     │                                                                         │
+     │ Context                                                                 │
+     │                                                                         │
+     │ В проекте уже есть: Circuit-навигация (Screens.kt/Presenters.kt/AppCirc │
+     │ uit.kt/AppNavHost.kt/GuardedNavigator), тёмно-золотая тема (AppTheme,   │
+     │ AppAccent, AppGradients, Cinzel/Nunito), 12 золотых иконок-коллекционок │
+     │ в composeResources/drawable, StorageHelper (Koin-синглтон,              │
+     │ putObject/getObject через JSON), MediaPicker                            │
+     │ (rememberGalleryPicker/rememberCameraPicker → ByteArray?),              │
+     │ LegalLinks(), Koin инициализирован (initKoin). Сейчас LoadingScreen     │
+     │ никуда не уходит, а HomeScreen — пустой плейсхолдер. Нужно превратить   │
+     │ скелет в рабочее приложение для коллекционирования (тематика            │
+     │ «Vault/Relics/Artifacts»), локально, без сервера.                       │
+     │                                                                         │
+     │ Реализуют три агента последовательно: android-screen-planner            │
+     │ (архитектура + скелет) → android-ui-composer (Material3 UI, адаптив) →  │
+     │ kotlin-multiplatform-expert (привязка камеры/галереи/legal/storage,     │
+     │ iOS-корректность).                                                      │
+     │                                                                         │
+     │ Решения (подтверждены пользователем)                                    │
+     │                                                                         │
+     │ - Навигация — Dashboard-хаб: без bottom bar. С Dashboard переходы по    │
+     │ карточкам/кнопкам на Collections/Showcase/AddArtifact; назад —          │
+     │ системной кнопкой (Circuit pop). Каждый экран рисует свой TopAppBar     │
+     │ (без вложенного Scaffold-инсета — хост RootScaffold уже применяет       │
+     │ insets/фон; использовать TopAppBar напрямую или                         │
+     │ Scaffold(contentWindowInsets = WindowInsets(0))).                       │
+     │ - Сид-данные при первом запуске: коллекции                              │
+     │ Coins/Minerals/Books/Figurines/Cards + набор артефактов (иконки как     │
+     │ фото); флаг seeded в StorageHelper. Статы Dashboard вычисляются из      │
+     │ данных (числа реальные, не ровно 147/$4820).                            │
+     │ - Collection tap → отдельный экран CollectionArtifacts (список/сетка    │
+     │ артефактов коллекции) → tap по артефакту открывает Details.             │
+     │                                                                         │
+     │ Экраны (Circuit data object/data class + @CommonParcelize)              │
+     │                                                                         │
+     │ - LoadingScreen (есть) — презентер теперь авто-уходит на Dashboard      │
+     │ (LaunchedEffect{ delay(~2.5s); navigator.resetRoot(DashboardScreen) }). │
+     │ - DashboardScreen — хаб. Блоки-статы                                    │
+     │ (Artifacts/Collections/Favorites/Value) Card'ами, «последние            │
+     │ добавленные», встроенная аналитика (распределение по категориям, по     │
+     │ редкости, топ по стоимости), кнопки/карточки навигации, футер           │
+     │ LegalLinks().                                                           │
+     │ - CollectionsScreen — список коллекций (иконка, количество, превью) →   │
+     │ goTo(CollectionArtifacts(id)).                                          │
+     │ - CollectionArtifactsScreen(val collectionId: String) — сетка/список    │
+     │ артефактов коллекции → goTo(ArtifactDetails(id)).                       │
+     │ - ArtifactDetailsScreen(val artifactId: String) — фото, описание,       │
+     │ категория, редкость, состояние, стоимость, место хранения, теги.        │
+     │ Material3: Chips (теги/категория/редкость), Slider (состояние),         │
+     │ RadioButton (выбор редкости/состояния), Dialog (удаление/просмотр       │
+     │ фото). Действия: избранное, удалить, (опц.) edit.                       │
+     │ - AddArtifactScreen — создание. Material3: TextField, Dropdown          │
+     │ (ExposedDropdownMenuBox: коллекция/категория), Slider                   │
+     │ (стоимость/состояние), Switch (favorite), RadioButton (редкость),       │
+     │ DatePicker (дата). 📷 Камера (rememberCameraPicker) и 🖼️ Галерея        │
+     │ (rememberGalleryPicker). Сохранение → repo → pop.                       │
+     │ - ShowcaseScreen — LazyVerticalGrid избранного, сортировка (By          │
+     │ Rarity/Value/Date — SegmentedButton/Chips), поиск                       │
+     │ (SearchBar/TextField). Tap → Details. (Этот же grid переиспользуется    │
+     │ только концептуально; для коллекции — отдельный экран.)                 │
+     │ - NoConnectionScreen (есть) — без изменений.                            │
+     │                                                                         │
+     │ Заменить пустой HomeScreen на DashboardScreen (обновить маршрут Ready в │
+     │ LoadingPresenter и регистрацию в AppCircuit).                           │
+     │                                                                         │
+     │ Данные / DI (commonMain)                                                │
+     │                                                                         │
+     │ - @Serializable модели: Collection(id, name, iconKey, …); Artifact(id,  │
+     │ collectionId, name, description, category, rarity: Rarity, condition:   │
+     │ Int 0..100, value: Double, storageLocation, tags: List<String>, images: │
+     │ List<ArtifactImage>, favorite, dateAddedMillis). enum Rarity { Common,  │
+     │ Uncommon, Rare, Epic, Legendary }. ArtifactImage (sealed                │
+     │ @Serializable): Resource(name) для сид-иконок / Bytes(base64) для       │
+     │ добавленных с камеры/галереи.                                           │
+     │ - CollectionsRepository (Koin single, зависит от StorageHelper): держит │
+     │ MutableStateFlow<List<Collection>>/<List<Artifact>>, грузит из          │
+     │ StorageHelper (getObject), при пустом — сеет; пишет через putObject при │
+     │ изменениях. API: collections, artifacts(collectionId), artifact(id),    │
+     │ favorites, dashboardStats() (counts+sum value), recent(n),              │
+     │ addArtifact(...), toggleFavorite(id), removeArtifact(id), search(q),    │
+     │ сортировки. Презентеры читают реактивно (collectAsState).               │
+     │ - Новый Koin dataModule { single { CollectionsRepository(get()) } };    │
+     │ добавить в modules(...) в di/Koin.kt. Презентеры получают repo через    │
+     │ getKoin().get<CollectionsRepository>() в фабриках AppCircuit.           │
+     │ - Сериализация уже подключена (плагин применён для StorageHelper).      │
+     │                                                                         │
+     │ Порядок исполнения (3 агента, последовательно, компиляция после         │
+     │ каждого)                                                                │
+     │                                                                         │
+     │ 1. android-screen-planner — финальная архитектура + компилируемый       │
+     │ скелет: модели, Rarity, ArtifactImage,                                  │
+     │ CollectionsRepository+seed+dataModule, ключи экранов, States/Events,    │
+     │ презентеры, регистрация в AppCircuit, навигационная разводка, авто-уход │
+     │ Loading→Dashboard, и плейсхолдер-композаблы всех экранов (чтобы всё     │
+     │ собиралось).                                                            │
+     │ 2. android-ui-composer — реальные Material3 UI каждого экрана (по       │
+     │ /material-3-skill), адаптивные/отзывчивые (колонки сетки по ширине,     │
+     │ WindowSizeClass), тема + иконки. Использовать LocalGuardedNavigator или │
+     │ Navigator из state для переходов; Coil3 для изображений                 │
+     │ (Resource→painterResource, Bytes→Coil ByteArray).                       │
+     │ 3. kotlin-multiplatform-expert — привязать                              │
+     │ rememberCameraPicker/rememberGalleryPicker в AddArtifact (и показ фото  │
+     │ в Details), LegalLinks() в Dashboard, корректную KMP-персистентность    │
+     │ repo через StorageHelper (base64 для добавленных фото), проверить       │
+     │ iOS-компиляцию и best practices.                                        │
+     │                                                                         │
+     │ Что НЕ трогаем                                                          │
+     │                                                                         │
+     │ Обфускацию/билд-машинерию, publish-pipeline, тему/иконки (используем),  │
+     │ MediaPicker/LegalLinks/StorageHelper API (используем как есть).         │
+     │                                                                         │
+     │ Verification                                                            │
+     │                                                                         │
+     │ - Компиляция обоих таргетов после каждого агента:                       │
+     │   - ./gradlew :composeApp:compileDebugKotlinAndroid                     │
+     │   - ./gradlew :composeApp:compileKotlinIosSimulatorArm64                │
+     │ - Ревью: навигационный граф (Loading→Dashboard→…→Details; back/pop),    │
+     │ repo сеет один раз и переживает рестарт, статы считаются из данных,     │
+     │ добавление артефакта реактивно обновляет Dashboard/Showcase; все        │
+     │ заявленные Material3-компоненты присутствуют на нужных экранах; экраны  │
+     │ не ломают insets хоста.                                                 │
+     │ - Полная функциональная проверка (камера/галерея, диалоги, DatePicker,  │
+     │ поиск/сортировка, round-trip persistence) — на устройстве/симуляторе    │
+     │ (desktop-таргета/headless-рендера нет).                                 │
+     │                                                                         │
+     │ Замечания / риски                                                       │
+     │                                                                         │
+     │ - Фото пользователя хранятся как base64 в StorageHelper                 │
+     │ (Prefs/NSUserDefaults) — ок для демо/малых изображений; для продакшена  │
+     │ лучше файловое хранилище (отметить, вне рамок).                         │
+     │ - Числа Dashboard будут реальными из сид-данных, а не буквально         │
+     │ 147/8/23/$4820.                                                         │
+     │ - Аналитику встраиваем в Dashboard (6-й экран Analytics не делаем — по  │
+     │ предпочтению пользователя).                                             │
+     │ - Сгенерированные Res.drawable.* аксессоры internal — UI-композаблы в   │
+     │ том же модуле (commonMain), доступ ок.                                  │
+     ╰─────────────────────────────────────────────────────────────────────────╯
+
+❯ @"android-ui-composer (agent)" нужно также встроить ассеты из                 
+  @composeApp/src/commonMain/composeResources/drawable/ по смыслу в             
+  экраны/компоненты                                                             
+  ⎿  Listed directory composeApp/src/commonMain/composeResources/drawable/
+
+● Good addition — the 12 gold icons should be woven into the screens (collection
+  icons, artifact placeholders, empty-states, decorative accents), not just sit
+  unused. Let me fold that into the plan.
+
+● Updated plan
+  ⎿  /plan to preview
+  ⎿  User rejected Claude's plan:
+     ╭─────────────────────────────────────────────────────────────────────────╮
+     │ План: реализация приложения-коллекционера (5–6 экранов) на существующем │
+     │ KMP/Circuit-скелете                                                     │
+     │                                                                         │
+     │ Context                                                                 │
+     │                                                                         │
+     │ В проекте уже есть: Circuit-навигация (Screens.kt/Presenters.kt/AppCirc │
+     │ uit.kt/AppNavHost.kt/GuardedNavigator), тёмно-золотая тема (AppTheme,   │
+     │ AppAccent, AppGradients, Cinzel/Nunito), 12 золотых иконок-коллекционок │
+     │ в composeResources/drawable, StorageHelper (Koin-синглтон,              │
+     │ putObject/getObject через JSON), MediaPicker                            │
+     │ (rememberGalleryPicker/rememberCameraPicker → ByteArray?),              │
+     │ LegalLinks(), Koin инициализирован (initKoin). Сейчас LoadingScreen     │
+     │ никуда не уходит, а HomeScreen — пустой плейсхолдер. Нужно превратить   │
+     │ скелет в рабочее приложение для коллекционирования (тематика            │
+     │ «Vault/Relics/Artifacts»), локально, без сервера.                       │
+     │                                                                         │
+     │ Реализуют три агента последовательно: android-screen-planner            │
+     │ (архитектура + скелет) → android-ui-composer (Material3 UI, адаптив) →  │
+     │ kotlin-multiplatform-expert (привязка камеры/галереи/legal/storage,     │
+     │ iOS-корректность).                                                      │
+     │                                                                         │
+     │ Решения (подтверждены пользователем)                                    │
+     │                                                                         │
+     │ - Навигация — Dashboard-хаб: без bottom bar. С Dashboard переходы по    │
+     │ карточкам/кнопкам на Collections/Showcase/AddArtifact; назад —          │
+     │ системной кнопкой (Circuit pop). Каждый экран рисует свой TopAppBar     │
+     │ (без вложенного Scaffold-инсета — хост RootScaffold уже применяет       │
+     │ insets/фон; использовать TopAppBar напрямую или                         │
+     │ Scaffold(contentWindowInsets = WindowInsets(0))).                       │
+     │ - Сид-данные при первом запуске: коллекции                              │
+     │ Coins/Minerals/Books/Figurines/Cards + набор артефактов (иконки как     │
+     │ фото); флаг seeded в StorageHelper. Статы Dashboard вычисляются из      │
+     │ данных (числа реальные, не ровно 147/$4820).                            │
+     │ - Collection tap → отдельный экран CollectionArtifacts (список/сетка    │
+     │ артефактов коллекции) → tap по артефакту открывает Details.             │
+     │                                                                         │
+     │ Экраны (Circuit data object/data class + @CommonParcelize)              │
+     │                                                                         │
+     │ - LoadingScreen (есть) — презентер теперь авто-уходит на Dashboard      │
+     │ (LaunchedEffect{ delay(~2.5s); navigator.resetRoot(DashboardScreen) }). │
+     │ - DashboardScreen — хаб. Блоки-статы                                    │
+     │ (Artifacts/Collections/Favorites/Value) Card'ами, «последние            │
+     │ добавленные», встроенная аналитика (распределение по категориям, по     │
+     │ редкости, топ по стоимости), кнопки/карточки навигации, футер           │
+     │ LegalLinks().                                                           │
+     │ - CollectionsScreen — список коллекций (иконка, количество, превью) →   │
+     │ goTo(CollectionArtifacts(id)).                                          │
+     │ - CollectionArtifactsScreen(val collectionId: String) — сетка/список    │
+     │ артефактов коллекции → goTo(ArtifactDetails(id)).                       │
+     │ - ArtifactDetailsScreen(val artifactId: String) — фото, описание,       │
+     │ категория, редкость, состояние, стоимость, место хранения, теги.        │
+     │ Material3: Chips (теги/категория/редкость), Slider (состояние),         │
+     │ RadioButton (выбор редкости/состояния), Dialog (удаление/просмотр       │
+     │ фото). Действия: избранное, удалить, (опц.) edit.                       │
+     │ - AddArtifactScreen — создание. Material3: TextField, Dropdown          │
+     │ (ExposedDropdownMenuBox: коллекция/категория), Slider                   │
+     │ (стоимость/состояние), Switch (favorite), RadioButton (редкость),       │
+     │ DatePicker (дата). 📷 Камера (rememberCameraPicker) и 🖼️ Галерея        │
+     │ (rememberGalleryPicker). Сохранение → repo → pop.                       │
+     │ - ShowcaseScreen — LazyVerticalGrid избранного, сортировка (By          │
+     │ Rarity/Value/Date — SegmentedButton/Chips), поиск                       │
+     │ (SearchBar/TextField). Tap → Details. (Этот же grid переиспользуется    │
+     │ только концептуально; для коллекции — отдельный экран.)                 │
+     │ - NoConnectionScreen (есть) — без изменений.                            │
+     │                                                                         │
+     │ Заменить пустой HomeScreen на DashboardScreen (обновить маршрут Ready в │
+     │ LoadingPresenter и регистрацию в AppCircuit).                           │
+     │                                                                         │
+     │ Данные / DI (commonMain)                                                │
+     │                                                                         │
+     │ - @Serializable модели: Collection(id, name, iconKey, …); Artifact(id,  │
+     │ collectionId, name, description, category, rarity: Rarity, condition:   │
+     │ Int 0..100, value: Double, storageLocation, tags: List<String>, images: │
+     │ List<ArtifactImage>, favorite, dateAddedMillis). enum Rarity { Common,  │
+     │ Uncommon, Rare, Epic, Legendary }. ArtifactImage (sealed                │
+     │ @Serializable): Resource(name) для сид-иконок / Bytes(base64) для       │
+     │ добавленных с камеры/галереи.                                           │
+     │ - CollectionsRepository (Koin single, зависит от StorageHelper): держит │
+     │ MutableStateFlow<List<Collection>>/<List<Artifact>>, грузит из          │
+     │ StorageHelper (getObject), при пустом — сеет; пишет через putObject при │
+     │ изменениях. API: collections, artifacts(collectionId), artifact(id),    │
+     │ favorites, dashboardStats() (counts+sum value), recent(n),              │
+     │ addArtifact(...), toggleFavorite(id), removeArtifact(id), search(q),    │
+     │ сортировки. Презентеры читают реактивно (collectAsState).               │
+     │ - Новый Koin dataModule { single { CollectionsRepository(get()) } };    │
+     │ добавить в modules(...) в di/Koin.kt. Презентеры получают repo через    │
+     │ getKoin().get<CollectionsRepository>() в фабриках AppCircuit.           │
+     │ - Сериализация уже подключена (плагин применён для StorageHelper).      │
+     │                                                                         │
+     │ Порядок исполнения (3 агента, последовательно, компиляция после         │
+     │ каждого)                                                                │
+     │                                                                         │
+     │ 1. android-screen-planner — финальная архитектура + компилируемый       │
+     │ скелет: модели, Rarity, ArtifactImage,                                  │
+     │ CollectionsRepository+seed+dataModule, ключи экранов, States/Events,    │
+     │ презентеры, регистрация в AppCircuit, навигационная разводка, авто-уход │
+     │ Loading→Dashboard, и плейсхолдер-композаблы всех экранов (чтобы всё     │
+     │ собиралось).                                                            │
+     │ 2. android-ui-composer — реальные Material3 UI каждого экрана (по       │
+     │ /material-3-skill), адаптивные/отзывчивые (колонки сетки по ширине,     │
+     │ WindowSizeClass), тема + иконки. Использовать LocalGuardedNavigator или │
+     │ Navigator из state для переходов; Coil3 для изображений                 │
+     │ (Resource→painterResource, Bytes→Coil ByteArray). Осмысленно встроить   │
+     │ все ассеты из composeResources/drawable/ (см. карту ниже): иконки       │
+     │ коллекций, плейсхолдеры фото артефактов, иллюстрации пустых состояний,  │
+     │ декоративные акценты.                                                   │
+     │                                                                         │
+     │ Карта ассетов → UI (использовать ВСЕ 12 иконок)                         │
+     │                                                                         │
+     │ - Иконки коллекций (Collection.iconKey): ic_coins→Coins,                │
+     │ ic_capsule→Minerals (кристалл/капсула), ic_deco_emblem→Books,           │
+     │ ic_vase→Figurines, ic_card→Cards. Резерв/прочие категории: ic_ornament, │
+     │ ic_medallion.                                                           │
+     │ - Плейсхолдеры фото артефактов (когда нет своего фото): сид-артефакты   │
+     │ получают иконку по категории; в сетках/деталях показывать её как        │
+     │ изображение-превью.                                                     │
+     │ - Декор/акценты: ic_diamond — на стат-блоке Value и индикаторе          │
+     │ редкости; ic_seal/ic_badge — печати/значки на карточках Details и       │
+     │ заголовках секций; ic_eye — иконка/герой экрана Showcase; ic_medallion  │
+     │ — лого/герой на Dashboard.                                              │
+     │ - Пустые состояния: ic_open_box — «коллекция пуста / ничего не          │
+     │ добавлено» (Showcase/CollectionArtifacts/Dashboard recent).             │
+     │ - outline_wifi уже используется в NoConnection;                         │
+     │ compose-multiplatform.xml — дефолтный плейсхолдер шаблона, НЕ           │
+     │ использовать (заменён нашими иконками).                                 │
+     │ - Все 12 (ic_medallion, ic_deco_emblem, ic_eye, ic_capsule, ic_diamond, │
+     │ ic_vase, ic_card, ic_open_box, ic_badge, ic_ornament, ic_coins,         │
+     │ ic_seal) должны быть задействованы хотя бы в одном месте.               │
+     │ 3. kotlin-multiplatform-expert — привязать                              │
+     │ rememberCameraPicker/rememberGalleryPicker в AddArtifact (и показ фото  │
+     │ в Details), LegalLinks() в Dashboard, корректную KMP-персистентность    │
+     │ repo через StorageHelper (base64 для добавленных фото), проверить       │
+     │ iOS-компиляцию и best practices.                                        │
+     │                                                                         │
+     │ Что НЕ трогаем                                                          │
+     │                                                                         │
+     │ Обфускацию/билд-машинерию, publish-pipeline, тему/иконки (используем),  │
+     │ MediaPicker/LegalLinks/StorageHelper API (используем как есть).         │
+     │                                                                         │
+     │ Verification                                                            │
+     │                                                                         │
+     │ - Компиляция обоих таргетов после каждого агента:                       │
+     │   - ./gradlew :composeApp:compileDebugKotlinAndroid                     │
+     │   - ./gradlew :composeApp:compileKotlinIosSimulatorArm64                │
+     │ - Ревью: навигационный граф (Loading→Dashboard→…→Details; back/pop),    │
+     │ repo сеет один раз и переживает рестарт, статы считаются из данных,     │
+     │ добавление артефакта реактивно обновляет Dashboard/Showcase; все        │
+     │ заявленные Material3-компоненты присутствуют на нужных экранах; экраны  │
+     │ не ломают insets хоста.                                                 │
+     │ - Полная функциональная проверка (камера/галерея, диалоги, DatePicker,  │
+     │ поиск/сортировка, round-trip persistence) — на устройстве/симуляторе    │
+     │ (desktop-таргета/headless-рендера нет).                                 │
+     │                                                                         │
+     │ Замечания / риски                                                       │
+     │                                                                         │
+     │ - Фото пользователя хранятся как base64 в StorageHelper                 │
+     │ (Prefs/NSUserDefaults) — ок для демо/малых изображений; для продакшена  │
+     │ лучше файловое хранилище (отметить, вне рамок).                         │
+     │ - Числа Dashboard будут реальными из сид-данных, а не буквально         │
+     │ 147/8/23/$4820.                                                         │
+     │ - Аналитику встраиваем в Dashboard (6-й экран Analytics не делаем — по  │
+     │ предпочтению пользователя).                                             │
+     │ - Сгенерированные Res.drawable.* аксессоры internal — UI-композаблы в   │
+     │ том же модуле (commonMain), доступ ок.                                  │
+     ╰─────────────────────────────────────────────────────────────────────────╯
+● Понял — данные приложения через StorageHelper должны храниться зашифрованными
+  (encrypted = true). В плане я это не зафиксировал явно — исправляю:
+  репозиторий будет читать/писать в шифрованное хранилище.
+
+● Updated plan
+  ⎿  /plan to preview
+
+● Updated plan
+  ⎿  /plan to preview
+
+● User approved Claude's plan
+  ⎿  Plan saved to: ~/.claude/plans/transient-sprouting-moonbeam.md · /plan to 
+     edit
+     План: реализация приложения-коллекционера (5–6 экранов) на существующем 
+     KMP/Circuit-скелете
+
+     Context
+
+     В проекте уже есть: Circuit-навигация
+     (Screens.kt/Presenters.kt/AppCircuit.kt/AppNavHost.kt/GuardedNavigator),
+     тёмно-золотая тема (AppTheme, AppAccent, AppGradients, Cinzel/Nunito), 12
+     золотых иконок-коллекционок в composeResources/drawable, StorageHelper
+     (Koin-синглтон, putObject/getObject через JSON), MediaPicker
+     (rememberGalleryPicker/rememberCameraPicker → ByteArray?), LegalLinks(),
+     Koin инициализирован (initKoin). Сейчас LoadingScreen никуда не уходит, а
+     HomeScreen — пустой плейсхолдер. Нужно превратить скелет в рабочее
+     приложение для коллекционирования (тематика «Vault/Relics/Artifacts»),
+     локально, без сервера.
+
+     Реализуют три агента последовательно: android-screen-planner (архитектура +
+     скелет) → android-ui-composer (Material3 UI, адаптив) →
+     kotlin-multiplatform-expert (привязка камеры/галереи/legal/storage,
+     iOS-корректность).
+
+     Решения (подтверждены пользователем)
+
+     - Навигация — Dashboard-хаб: без bottom bar. С Dashboard переходы по
+     карточкам/кнопкам на Collections/Showcase/AddArtifact; назад — системной
+     кнопкой (Circuit pop). Каждый экран рисует свой TopAppBar (без вложенного
+     Scaffold-инсета — хост RootScaffold уже применяет insets/фон; использовать
+     TopAppBar напрямую или Scaffold(contentWindowInsets = WindowInsets(0))).
+     - Сид-данные при первом запуске: коллекции
+     Coins/Minerals/Books/Figurines/Cards + набор артефактов (иконки как фото);
+     флаг seeded в StorageHelper. Статы Dashboard вычисляются из данных (числа
+     реальные, не ровно 147/$4820).
+     - Collection tap → отдельный экран CollectionArtifacts (список/сетка
+     артефактов коллекции) → tap по артефакту открывает Details.
+
+     Экраны (Circuit data object/data class + @CommonParcelize)
+
+     - LoadingScreen (есть) — презентер теперь авто-уходит на Dashboard
+     (LaunchedEffect{ delay(~2.5s); navigator.resetRoot(DashboardScreen) }).
+     - DashboardScreen — хаб. Блоки-статы
+     (Artifacts/Collections/Favorites/Value) Card'ами, «последние добавленные»,
+     встроенная аналитика (распределение по категориям, по редкости, топ по
+     стоимости), кнопки/карточки навигации, футер LegalLinks().
+     - CollectionsScreen — список коллекций (иконка, количество, превью) →
+     goTo(CollectionArtifacts(id)).
+     - CollectionArtifactsScreen(val collectionId: String) — сетка/список
+     артефактов коллекции → goTo(ArtifactDetails(id)).
+     - ArtifactDetailsScreen(val artifactId: String) — фото, описание,
+     категория, редкость, состояние, стоимость, место хранения, теги. Material3:
+     Chips (теги/категория/редкость), Slider (состояние), RadioButton (выбор
+     редкости/состояния), Dialog (удаление/просмотр фото). Действия: избранное,
+     удалить, (опц.) edit.
+     - AddArtifactScreen — создание. Material3: TextField, Dropdown
+     (ExposedDropdownMenuBox: коллекция/категория), Slider
+     (стоимость/состояние), Switch (favorite), RadioButton (редкость),
+     DatePicker (дата). 📷 Камера (rememberCameraPicker) и 🖼️ Галерея
+     (rememberGalleryPicker). Сохранение → repo → pop.
+     - ShowcaseScreen — LazyVerticalGrid избранного, сортировка (By
+     Rarity/Value/Date — SegmentedButton/Chips), поиск (SearchBar/TextField).
+     Tap → Details. (Этот же grid переиспользуется только концептуально; для
+     коллекции — отдельный экран.)
+     - NoConnectionScreen (есть) — без изменений.
+
+     Заменить пустой HomeScreen на DashboardScreen (обновить маршрут Ready в
+     LoadingPresenter и регистрацию в AppCircuit).
+
+     Данные / DI (commonMain)
+
+     - @Serializable модели: Collection(id, name, iconKey, …); Artifact(id, 
+     collectionId, name, description, category, rarity: Rarity, condition: Int 
+     0..100, value: Double, storageLocation, tags: List<String>, images: 
+     List<ArtifactImage>, favorite, dateAddedMillis). enum Rarity { Common, 
+     Uncommon, Rare, Epic, Legendary }. ArtifactImage (sealed @Serializable):
+     Resource(name) для сид-иконок / Bytes(base64) для добавленных с
+     камеры/галереи.
+     - CollectionsRepository (Koin single, зависит от StorageHelper): держит
+     MutableStateFlow<List<Collection>>/<List<Artifact>>, грузит из
+     StorageHelper (getObject(..., encrypted = true)), при пустом — сеет; пишет
+     через putObject(..., encrypted = true) при изменениях. ВСЁ хранение 
+     строк/данных приложения — через зашифрованное хранилище (encrypted = true):
+     Android EncryptedSharedPreferences, iOS Keychain (требование
+     пользователя). API: collections, artifacts(collectionId), artifact(id),
+     favorites, dashboardStats() (counts+sum value), recent(n),
+     addArtifact(...), toggleFavorite(id), removeArtifact(id), search(q),
+     сортировки. Презентеры читают реактивно (collectAsState).
+     - Новый Koin dataModule { single { CollectionsRepository(get()) } };
+     добавить в modules(...) в di/Koin.kt. Презентеры получают repo через
+     getKoin().get<CollectionsRepository>() в фабриках AppCircuit.
+     - Сериализация уже подключена (плагин применён для StorageHelper).
+
+     Порядок исполнения (3 агента, последовательно, компиляция после каждого)
+
+     1. android-screen-planner — финальная архитектура + компилируемый скелет:
+     модели, Rarity, ArtifactImage, CollectionsRepository+seed+dataModule, ключи
+     экранов, States/Events, презентеры, регистрация в AppCircuit,
+     навигационная разводка, авто-уход Loading→Dashboard, и
+     плейсхолдер-композаблы всех экранов (чтобы всё собиралось).
+     2. android-ui-composer — реальные Material3 UI каждого экрана (по
+     /material-3-skill), адаптивные/отзывчивые (колонки сетки по ширине,
+     WindowSizeClass), тема + иконки. Использовать LocalGuardedNavigator или
+     Navigator из state для переходов; Coil3 для изображений
+     (Resource→painterResource, Bytes→Coil ByteArray). Осмысленно встроить все 
+     ассеты из composeResources/drawable/ (см. карту ниже): иконки коллекций,
+     плейсхолдеры фото артефактов, иллюстрации пустых состояний, декоративные
+     акценты.
+
+     Карта ассетов → UI (использовать ВСЕ 12 иконок)
+
+     - Иконки коллекций (Collection.iconKey): ic_coins→Coins,
+     ic_capsule→Minerals (кристалл/капсула), ic_deco_emblem→Books,
+     ic_vase→Figurines, ic_card→Cards. Резерв/прочие категории: ic_ornament,
+     ic_medallion.
+     - Плейсхолдеры фото артефактов (когда нет своего фото): сид-артефакты
+     получают иконку по категории; в сетках/деталях показывать её как
+     изображение-превью.
+     - Декор/акценты: ic_diamond — на стат-блоке Value и индикаторе редкости;
+     ic_seal/ic_badge — печати/значки на карточках Details и заголовках секций;
+     ic_eye — иконка/герой экрана Showcase; ic_medallion — лого/герой на
+     Dashboard.
+     - Пустые состояния: ic_open_box — «коллекция пуста / ничего не добавлено»
+     (Showcase/CollectionArtifacts/Dashboard recent).
+     - outline_wifi уже используется в NoConnection; compose-multiplatform.xml —
+     дефолтный плейсхолдер шаблона, НЕ использовать (заменён нашими иконками).
+     - Все 12 (ic_medallion, ic_deco_emblem, ic_eye, ic_capsule, ic_diamond, 
+     ic_vase, ic_card, ic_open_box, ic_badge, ic_ornament, ic_coins, ic_seal)
+     должны быть задействованы хотя бы в одном месте.
+     3. kotlin-multiplatform-expert — привязать
+     rememberCameraPicker/rememberGalleryPicker в AddArtifact (и показ фото в
+     Details), LegalLinks() в Dashboard, корректную KMP-персистентность repo
+     через StorageHelper (base64 для добавленных фото), проверить iOS-компиляцию
+     и best practices.
+
+     Что НЕ трогаем
+
+     Обфускацию/билд-машинерию, publish-pipeline, тему/иконки (используем),
+     MediaPicker/LegalLinks/StorageHelper API (используем как есть).
+
+     Verification
+
+     - Компиляция обоих таргетов после каждого агента:
+       - ./gradlew :composeApp:compileDebugKotlinAndroid
+       - ./gradlew :composeApp:compileKotlinIosSimulatorArm64
+     - Ревью: навигационный граф (Loading→Dashboard→…→Details; back/pop), repo
+     сеет один раз и переживает рестарт, статы считаются из данных, добавление
+     артефакта реактивно обновляет Dashboard/Showcase; все заявленные
+     Material3-компоненты присутствуют на нужных экранах; экраны не ломают
+     insets хоста.
+     - Шифрование: repo использует encrypted = true во всех вызовах
+     StorageHelper; проверить, что данные не лежат в обычных
+     SharedPreferences/NSUserDefaults, а в EncryptedSharedPreferences/Keychain.
+     - Полная функциональная проверка (камера/галерея, диалоги, DatePicker,
+     поиск/сортировка, round-trip persistence) — на устройстве/симуляторе
+     (desktop-таргета/headless-рендера нет).
+
+     Замечания / риски
+
+     - Фото пользователя хранятся как base64 в StorageHelper
+     (Prefs/NSUserDefaults) — ок для демо/малых изображений; для продакшена
+     лучше файловое хранилище (отметить, вне рамок).
+     - Числа Dashboard будут реальными из сид-данных, а не буквально
+     147/8/23/$4820.
+     - Аналитику встраиваем в Dashboard (6-й экран Analytics не делаем — по
+     предпочтению пользователя).
+     - Сгенерированные Res.drawable.* аксессоры internal — UI-композаблы в том
+     же модуле (commonMain), доступ ок.
+
+● Plan approved. First, let me record the encryption preference (you flagged it
+  twice — worth persisting), then start execution.
+
+  Recalled 1 memory, wrote 3 memories (ctrl+o to expand)
+
+● Now executing. Step 1: android-screen-planner — build the architecture + a
+  compiling skeleton (data layer, DI, Circuit screens/presenters/states, nav
+  wiring, placeholder composables).
+
+● android-screen-planner(Build app architecture skeleton)
+  ⎿  Done (44 tool uses · 85.9k tokens · 7m 42s)
+  (ctrl+o to expand)
+
+● Skeleton compiles on both targets. Step 2: android-ui-composer — replace the
+  placeholder composables with real adaptive Material3 UIs and weave in the
+  drawable assets.
+
+● android-ui-composer(Build Material3 screen UIs)
+  ⎿  Done (67 tool uses · 111.5k tokens · 10m 53s)
+  (ctrl+o to expand)
+
+● UI built. Let me compile both targets before the final wiring step.
+
+● Bash(echo "=== ANDROID ===" && timeout 560 ./gradlew
+      :composeApp:compileDebugKotlinAndroid -q 2>&1 | grep -vE "^w: " | tail
+      -30; echo "ANDROID EXIT: ${PIPESTATUS[0]}…)
+  ⎿  === ANDROID ===
+     ANDROID EXIT:
+
+● Bash(echo "=== iOS ===" && timeout 560 ./gradlew
+      :composeApp:compileKotlinIosSimulatorArm64 -q 2>&1 | grep -vE "^w: " |
+      tail -30; echo "iOS EXIT: ${PIPESTATUS[0]}")
+  ⎿  === iOS ===
+     iOS EXIT:
+
+● Both targets compile. Step 3: kotlin-multiplatform-expert — wire the existing
+  camera/gallery into Add Artifact, make Bytes (base64) photos actually render,
+  and verify encrypted persistence + iOS correctness.
+
+● kotlin-multiplatform-expert(Wire camera/gallery/legal/storage)
+  ⎿  Done (24 tool uses · 68.1k tokens · 2m 31s)
+  (ctrl+o to expand)
+
+● Final verification — compile both targets.
+
+● Bash(echo "=== ANDROID ===" && timeout 560 ./gradlew
+      :composeApp:compileDebugKotlinAndroid -q 2>&1 | grep -vE "^w: " | tail
+      -25; echo "ANDROID EXIT: ${PIPESTATUS[0]}…)
+  ⎿  === ANDROID ===
+     e: file:///home/kr0fff/AndroidStudioProjects/Work/5773/composeApp/src/
+     commonMain/kotlin/com/trid/test/kmpsample/ui/components/CollectorUi.kt
+     … +32 lines (ctrl+o to expand)
+
+● A missing remember import in CollectorUi.kt. Let me check and fix.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Update(composeApp/src/commonMain/kotlin/com/trid/test/kmpsample/ui/components/
+        CollectorUi.kt)
+  ⎿  Added 1 line
+      14  import androidx.compose.material3.Surface
+      15  import androidx.compose.material3.Text
+      16  import androidx.compose.runtime.Composable
+      17 +import androidx.compose.runtime.remember                       
+      18  import androidx.compose.ui.Alignment
+      19  import androidx.compose.ui.Modifier
+      20  import androidx.compose.ui.draw.clip
+
+● Bash(echo "=== ANDROID ===" && timeout 560 ./gradlew
+      :composeApp:compileDebugKotlinAndroid -q 2>&1 | grep -vE "^w: " | tail
+      -20; echo "ANDROID EXIT: ${PIPESTATUS[0]}…)
+  ⎿  === ANDROID ===
+     ANDROID EXIT:
+     === iOS ===
+     iOS EXIT:
+
+● Both targets compile clean. Since this milestone touched the manifest
+  (MainApplication, providers) and adds many screens, let me run a full Android
+  assembleDebug to validate manifest merge + resource processing end-to-end.
+
+● Bash(timeout 600 ./gradlew :composeApp:assembleDebug -q 2>&1 | grep -vE "^w: "
+      | tail -30; echo "EXIT: ${PIPESTATUS[0]}"; ls -la
+      composeApp/build/outputs/apk/debug/*…)
+  ⎿  EXIT:
+     -rw-r--r--. 1 kr0fff kr0fff 50817083 Jun  3 16:29 composeApp/build/out
+     puts/apk/debug/composeApp-debug.apk
+● Полный debug APK собирается успешно (50 МБ, манифест-мердж + ресурсы прошли).
+  Приложение реализовано.
+
+  Готово ✅ — приложение-коллекционер реализовано на KMP/Circuit-скелете
+
+  Три агента отработали последовательно, оба таргета компилируются, Android APK 
+  собирается.
+
+  Архитектура (android-screen-planner)
+
+  - Данные (data/): @Serializable модели Collection, Artifact, Rarity,
+  ArtifactImage (Resource/Bytes), DashboardStats, хелпер DrawableKeys.
+  - CollectionsRepository (Koin single) — реактивные StateFlow, сид при первом 
+  запуске (5 коллекций Coins/Minerals/Books/Figurines/Cards + 6–10 артефактов в
+  каждой, детерминированный сид), все чтения/записи через StorageHelper с
+  encrypted = true (EncryptedSharedPreferences / Keychain). dataModule добавлен
+  в Koin.
+  - Навигация (Dashboard-хаб): Loading авто-уходит на Dashboard (2.5с) →
+  Collections → CollectionArtifacts → Details; Showcase → Details; Add →
+  save→pop. HomeScreen заменён на DashboardScreen.
+
+  UI (android-ui-composer) — Material3, адаптивный
+
+  - Dashboard: герой с ic_medallion, 4 стат-карты (Value с ic_diamond),
+  «последние», встроенная аналитика (распределение по категориям/редкости, топ
+  по стоимости), футер LegalLinks().
+  - Collections / CollectionArtifacts / Showcase: адаптивные LazyVerticalGrid
+  (колонки по ширине), ic_eye-герой и поиск+сортировка (SegmentedButton) на
+  Showcase.
+  - Artifact Details: фото со штампом ic_seal/ic_badge, Chips
+  (теги/категория/редкость), Slider (состояние), RadioButton, AlertDialog
+  (удаление/зум).
+  - Add Artifact: TextField, ExposedDropdownMenu, Slider, Switch, RadioButton,
+  DatePicker, кнопки Camera/Gallery.
+  - Все 12 иконок задействованы; пустые состояния — ic_open_box.
+
+  Привязки (kotlin-multiplatform-expert)
+
+  - Камера/галерея в Add Artifact: rememberCameraPicker/rememberGalleryPicker →
+  ByteArray → base64 (kotlin.io.encoding.Base64) → ArtifactImage.Bytes → превью
+  и сохранение.
+  - ArtifactThumb теперь рендерит Bytes через Coil3 (AsyncImage(model = 
+  ByteArray)), Resource — через painterResource.
+  - Аудит шифрования: все вызовы StorageHelper в репозитории — encrypted = true.
+  ✅
+  - iOS-safe (Base64 stdlib, Coil ByteArrayFetcher в commonMain, без
+  JVM/Android-API в common).
+
+  (Поправил по ходу: отсутствовавший импорт remember в CollectorUi.kt.)
+
+  Замечания
+
+  - Числа Dashboard — реальные из сид-данных, не буквально 147/$4820.
+  - Фото пользователя хранятся base64 в шифрованном StorageHelper — ок для демо;
+  для продакшена лучше файловое хранилище.
+  - LoadingPresenter пока всегда уходит на Dashboard через 2.5с — реальную
+  проверку связи (→ NoConnection) можно добавить позже.
+  - Функциональная проверка (камера/галерея, диалоги, DatePicker,
+  поиск/сортировка, round-trip шифрования) — только на устройстве/симуляторе.
+
+✻ Churned for 29m 14s
+
+※ recap: Building a KMP collecting app (Android+iOS) on the existing Circuit/theme/storage scaffold. All five screens, data layer, camera/gallery, encrypted storage, and legal links are implemented and both targets compile plus the Android APK builds. Next: functionally verify on a device or simulator. (disable recaps in /config)
+
+❯ /skills 
+  ⎿  Skills dialog dismissed
+
+❯ /plugin                                                                       
+  ⎿  ✓ Installed skill-creator. Run /reload-plugins to apply.
+
+❯ /plugin                                                                       
+  ⎿  (no content)
+
+❯ @composeApp/src/commonMain/kotlin/com/trid/test/kmpsample/ui/wrappers/RootSca 
+  ffold.kt почему у меня видно цветной статус-бар? он должен быть в цвет        
+  градиента, на всю длину ус-ва                                                 
+  ⎿  Read composeApp/src/commonMain/kotlin/com/trid/test/kmpsample/ui/wrappers/RootScaffold.kt (59 lines)
+
+● I'm in plan mode, so let me investigate the actual cause (read-only) before
+  proposing a fix. The RootScaffold was edited — notably the Scaffold no longer
+  sets containerColor = Color.Transparent. Let me check that and the
+  window/edge-to-edge setup on both platforms.
+
+  Read 3 files (ctrl+o to expand)
+
+● Found the cause. It's not a status-bar color setting — it's the layout. The
+  gradient isn't reaching behind the status bar because AppTheme's outer Surface
+  is inset by windowInsetsPadding(safeDrawing) and paints opaque obsidian, so
+  the whole UI (including RootScaffold's gradient) starts below the status bar.
+  The status-bar strip is left unpainted by Compose, so the OS window background
+  (the light Theme.Material.Light window) shows through — that's the "colored
+  bar" you see.
+
+  Two compounding issues:
+  1. Theme.kt → AppTheme: the Surface has
+  .windowInsetsPadding(WindowInsets.safeDrawing).consumeWindowInsets(...) → not
+  full-bleed; the gradient can never go behind the status bar. (Also
+  double-insets, since RootScaffold's Scaffold already applies
+  contentWindowInsets = safeDrawing.)
+  2. RootScaffold.kt: the Scaffold lost containerColor = Color.Transparent (it
+  was removed). With the default opaque colorScheme.background, the Scaffold
+  paints obsidian over the full-bleed gradient Box.
+
+  Fix = make the background full-bleed and let content (not the background) own
+  the insets. Let me write the plan.
+
+● Updated plan
+  ⎿  /plan to preview
+
+● User approved Claude's plan
+  ⎿  Plan saved to: ~/.claude/plans/transient-sprouting-moonbeam.md · /plan to 
+     edit
+     План: градиент на весь экран (за статус-баром), убрать «цветной» статус-бар
+
+     Context
+
+     Пользователь видит «цветной» статус-бар, а хочет, чтобы фон-градиент шёл на
+     всю высоту устройства, в т.ч. за статус-баром (edge-to-edge). Причина не в
+     настройке цвета бара, а в раскладке:
+
+     - ui/theme/Theme.kt → AppTheme оборачивает весь UI в Surface с
+     Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).consum
+     eWindowInsets(safeDrawing) и непрозрачным color = colorScheme.background.
+     Из-за инсет-паддинга этот Surface НЕ заходит под статус-бар, а область бара
+     ничем в Compose не закрашивается → проступает фон окна Activity
+     (@android:style/Theme.Material.Light...) = светлая полоса. Плюс это даёт
+     двойной инсет (Scaffold внутри тоже применяет safeDrawing).
+     - ui/wrappers/RootScaffold.kt → Scaffold сейчас БЕЗ containerColor → дефолт
+     colorScheme.background (непрозрачный) закрашивает full-bleed градиент-Box
+     под собой.
+
+     Итог: full-bleed Box с градиентом в RootScaffold по факту перекрыт/обрезан,
+     а за статус-баром — фон окна.
+
+     Решение (минимально, кроссплатформенно, в commonMain)
+
+     Сделать ФОН full-bleed (за системными барами), а инсеты применять только к
+     КОНТЕНТУ (это уже делает Scaffold(contentWindowInsets = safeDrawing)).
+
+     1. ui/theme/Theme.kt — AppTheme: убрать у Surface
+     .windowInsetsPadding(WindowInsets.safeDrawing) и
+     .consumeWindowInsets(WindowInsets.safeDrawing), оставить только
+     Modifier.fillMaxSize() (full-bleed). Цвет можно оставить
+     colorScheme.background как базу (его перекроет градиент RootScaffold) или
+     сделать Color.Transparent. Удалить ставшие неиспользуемыми импорты
+     (windowInsetsPadding, consumeWindowInsets, safeDrawing, при необходимости
+     WindowInsets).
+       - Эффект: фон-слой теперь покрывает весь экран, включая зону статус-бара;
+     и пропадает двойной инсет.
+     2. ui/wrappers/RootScaffold.kt — Scaffold: вернуть containerColor = 
+     Color.Transparent (и contentColor = 
+     MaterialTheme.colorScheme.onBackground), чтобы градиент-Box (full-bleed)
+     был виден; contentWindowInsets = WindowInsets.safeDrawing оставить (контент
+     остаётся в безопасной зоне). Градиент-Box уже fillMaxSize() → теперь
+     реально тянется под статус-бар.
+     3. (Опционально, Android косметика) androidMain/.../MainActivity.kt: на
+     тёмно-золотом градиенте иконки статус-бара лучше делать СВЕТЛЫМИ. Сейчас
+     configureSystemBars() ставит APPEARANCE_LIGHT_STATUS_BARS (тёмные иконки).
+     При желании убрать этот флаг/выставить тёмный стиль (светлые иконки).
+     edge-to-edge уже включён (enableEdgeToEdge), так что отдельной правки для
+     «зайти под бар» не требуется. iOS (ComposeUIViewController { App() })
+     рисует edge-to-edge по умолчанию — фикс в commonMain покрывает обе
+     платформы.
+
+     Файлы
+
+     -
+     composeApp/src/commonMain/kotlin/com/trid/test/kmpsample/ui/theme/Theme.kt
+     (AppTheme)
+     - composeApp/src/commonMain/kotlin/com/trid/test/kmpsample/ui/wrappers/Root
+     Scaffold.kt (Scaffold containerColor/contentColor)
+     - (опц.)
+     composeApp/src/androidMain/kotlin/com/trid/test/kmpsample/MainActivity.kt
+     (цвет иконок бара)
+
+     Verification
+
+     - ./gradlew :composeApp:compileDebugKotlinAndroid и
+     :compileKotlinIosSimulatorArm64 — оба компилируются.
+     - Визуально на устройстве/симуляторе: градиент идёт от самого верха (под
+     статус-баром) до низа; статус-бар прозрачный (видно градиент), светлой
+     полосы нет; контент по-прежнему в безопасной зоне (не наезжает на
+     бар/вырез). На Android проверить и портрет, и присутствие выреза.
+
+     Замечания
+
+     - Это правит только раскладку фона/инсетов; экраны, навигация, данные не
+     затрагиваются.
+     - Если после фикса контент где-то «приклеился» к краю — это значит экран
+     полагался на старый двойной инсет; такие места правятся точечно (добавить
+     отступ внутри экрана), но ожидается, что Scaffold(contentWindowInsets)
+     достаточно.
+
+● Implementing the fix. First, AppTheme — make the background full-bleed (remove
+  inset padding).
+
+● Update(composeApp/src/commonMain/kotlin/com/trid/test/kmpsample/ui/theme/Theme
+        .kt)
+  ⎿  Removed 4 lines
+       1  package com.trid.test.kmpsample.ui.theme
+       2  
+       3 -import androidx.compose.foundation.layout.WindowInsets         
+       4 -import androidx.compose.foundation.layout.consumeWindowInsets  
+       3  import androidx.compose.foundation.layout.fillMaxSize
+       6 -import androidx.compose.foundation.layout.safeDrawing          
+       7 -import androidx.compose.foundation.layout.windowInsetsPadding  
+       4  import androidx.compose.material3.ColorScheme
+       5  import androidx.compose.material3.MaterialTheme
+       6  import androidx.compose.material3.Surface
+
+● Update(composeApp/src/commonMain/kotlin/com/trid/test/kmpsample/ui/theme/Theme
+        .kt)
+  ⎿  Added 7 lines, removed 7 lines
+       93  }
+       94  
+       95  /**
+       96 - * Applies the app's dark Material 3 color scheme and typograp
+          -hy. Wraps content                                             
+       97 - * in a [Surface] that consumes the safe-drawing insets so chi
+          -ldren can lay out                                             
+       98 - * within the safe area.                                      
+       96 + * Applies the app's dark Material 3 color scheme and typograp
+          +hy. The wrapping                                              
+       97 + * [Surface] is intentionally **full-bleed** (no inset padding
+          +) so the app                                                  
+       98 + * background extends edge-to-edge behind the system bars. Saf
+          +e-area insets are                                             
+       99 + * applied to the *content* downstream by `RootScaffold`'s `co
+          +ntentWindowInsets`,                                           
+      100 + * not here — applying them in both places would double-pad an
+          +d leave the                                                   
+      101 + * status-bar strip unpainted.                                
+      102   */
+      103  @Composable
+      104  fun AppTheme(content: @Composable () -> Unit) {
+     ...
+      107          typography = appTypography(),
+      108      ) {
+      109          Surface(
+      107 -            modifier = Modifier                               
+      108 -                .fillMaxSize()                                
+      109 -                .windowInsetsPadding(WindowInsets.safeDrawing)
+      110 -                .consumeWindowInsets(WindowInsets.safeDrawing)
+          -,                                                             
+      110 +            modifier = Modifier.fillMaxSize(),                
+      111              color = MaterialTheme.colorScheme.background,
+      112              content = content,
+      113          )
+
+● Now RootScaffold — restore the transparent container so the full-bleed
+  gradient shows.
+
+● Update(composeApp/src/commonMain/kotlin/com/trid/test/kmpsample/ui/wrappers/Ro
+        otScaffold.kt)
+  ⎿  Error editing file
+
+  Read 1 file (ctrl+o to expand)
+
+● The transparent container is already in place now. I'll add contentColor and
+  wire the (currently-dropped) topBar/bottomBar params for correctness.
+
+● Update(composeApp/src/commonMain/kotlin/com/trid/test/kmpsample/ui/wrappers/Ro
+        otScaffold.kt)
+  ⎿  Added 5 lines
+      51          )
+      52          Scaffold(
+      53              modifier = modifier.fillMaxSize().imePadding(),
+      54 +            // Transparent so the full-bleed gradient Box behin
+         +d shows through                                                
+      55 +            // (incl. behind the status bar). Only the content 
+         +respects insets.                                               
+      56              containerColor = Color.Transparent,
+      57 +            contentColor = MaterialTheme.colorScheme.onBackgrou
+         +nd,                                                            
+      58 +            topBar = topBar,                                   
+      59 +            bottomBar = bottomBar,                             
+      60              contentWindowInsets = WindowInsets.safeDrawing,
+      61              content = content,
+      62          )
+
+● Now compile both targets.
+
+● Bash(echo "=== ANDROID ===" && timeout 560 ./gradlew
+      :composeApp:compileDebugKotlinAndroid -q 2>&1 | grep -vE "^w: " | tail
+      -20; echo "ANDROID EXIT: ${PIPESTATUS[0]}…)  ⎿  === ANDROID ===
+     ANDROID EXIT:
+     === iOS ===
+     iOS EXIT:
+  ⎿  (timeout 9m 40s)
+
+● Готово ✅ — оба таргета компилируются.
+
+  Причина и фикс
+
+  Дело было не в настройке цвета бара, а в раскладке фона:
+
+  AppTheme (Theme.kt) оборачивал весь UI в Surface с
+  windowInsetsPadding(safeDrawing) + непрозрачным обсидиановым цветом. Из-за
+  инсет-паддинга этот Surface не заходил под статус-бар, и полоса бара
+  оставалась незакрашенной Compose'ом → проступал фон окна Activity (светлая
+  тема Theme.Material.Light) = «цветной» статус-бар. Плюс это давало двойной
+  инсет (Scaffold внутри тоже инсетит).
+
+  Что сделал:
+  1. Theme.kt → AppTheme: Surface теперь full-bleed (Modifier.fillMaxSize() без
+  windowInsetsPadding/consumeWindowInsets). Фон тянется edge-to-edge за
+  системные бары; двойной инсет убран.
+  2. RootScaffold.kt: Scaffold — containerColor = Color.Transparent (чтобы
+  full-bleed градиент-Box был виден, в т.ч. под статус-баром) + contentColor = 
+  colorScheme.onBackground. Заодно подключил topBar/bottomBar (раньше параметры
+  объявлялись, но в Scaffold не передавались — латентный баг).
+  contentWindowInsets = safeDrawing оставил — контент остаётся в безопасной
+  зоне.
+
+  Итог: градиент идёт от самого верха (под статус-баром) до низа; инсеты
+  применяются только к контенту.
+
+  Проверить визуально на устройстве/симуляторе: светлой полосы вверху нет,
+  градиент за статус-баром, контент не наезжает на бар/вырез.
+
+  Опционально (косметика, не делал): на тёмно-золотом верху иконки статус-бара
+  сейчас тёмные (APPEARANCE_LIGHT_STATUS_BARS в
+  MainActivity.configureSystemBars()) — могут плохо читаться. Если плохо видно —
+  скажи, переключу на светлые иконки.
+
+✻ Churned for 5m 18s

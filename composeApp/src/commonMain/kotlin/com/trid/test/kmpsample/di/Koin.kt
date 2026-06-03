@@ -24,8 +24,8 @@ val storageModule: Module = module {
 
 /**
  * Data graph. [CollectionsRepository] is a process singleton built on top of
- * [StorageHelper]; it owns the collections/artifacts state and seeds on first
- * launch. Presenters obtain it via `KoinPlatform.getKoin().get<CollectionsRepository>()`.
+ * [StorageHelper]; it owns the user-created collections/artifacts state.
+ * Presenters obtain it via `KoinPlatform.getKoin().get<CollectionsRepository>()`.
  */
 val dataModule: Module = module {
     single { CollectionsRepository(get()) }

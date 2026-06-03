@@ -15,10 +15,14 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -26,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.trid.test.kmpsample.data.Artifact
@@ -36,6 +41,7 @@ import com.trid.test.kmpsample.navigation.CollectionsUiState
 import com.trid.test.kmpsample.ui.components.ArtifactThumb
 import com.trid.test.kmpsample.ui.components.EmptyState
 import com.trid.test.kmpsample.ui.components.KeyedIcon
+import com.trid.test.kmpsample.ui.components.NavBackIcon
 import org.koin.mp.KoinPlatform
 
 /**
@@ -43,6 +49,7 @@ import org.koin.mp.KoinPlatform
  * count and a small preview strip of the first artifacts' icons. Adaptive grid
  * scales columns with available width.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CollectionsScreenUi(
     state: CollectionsUiState,
@@ -53,31 +60,53 @@ fun CollectionsScreenUi(
     val repository = remember { KoinPlatform.getKoin().get<CollectionsRepository>() }
     val artifacts by repository.artifacts.collectAsState()
 
-    if (state.collections.isEmpty()) {
-        Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            EmptyState(
-                title = "No collections",
-                subtitle = "Collections you create will appear here.",
-            )
-        }
-        return
-    }
+    Column(modifier = modifier.fillMaxSize()) {
+        TopAppBar(
+            title = { Text("Collections", style = MaterialTheme.typography.titleLarge) },
+            navigationIcon = {
+                NavBackIcon(
+                    onClick = { state.eventSink(CollectionsUiEvent.Back) },
+                    modifier = Modifier.padding(start = 4.dp),
+                )
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent,
+                titleContentColor = MaterialTheme.colorScheme.onBackground,
+                navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
+            ),
+        )
 
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 170.dp),
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        items(state.collections, key = { it.id }) { collection ->
-            val preview = artifacts.filter { it.collectionId == collection.id }
-            CollectionCard(
-                collection = collection,
-                count = preview.size,
-                preview = preview.take(4),
-                onClick = { state.eventSink(CollectionsUiEvent.OpenCollection(collection.id)) },
-            )
+        if (state.collections.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    EmptyState(
+                        title = "No collections yet",
+                        subtitle = "Create your first item and choose a collection name while saving it.",
+                    )
+                    Button(onClick = { state.eventSink(CollectionsUiEvent.OpenAddArtifact) }) {
+                        Text("Add first item")
+                    }
+                }
+            }
+            return@Column
+        }
+
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 170.dp),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            items(state.collections, key = { it.id }) { collection ->
+                val preview = artifacts.filter { it.collectionId == collection.id }
+                CollectionCard(
+                    collection = collection,
+                    count = preview.size,
+                    preview = preview.take(4),
+                    onClick = { state.eventSink(CollectionsUiEvent.OpenCollection(collection.id)) },
+                )
+            }
         }
     }
 }

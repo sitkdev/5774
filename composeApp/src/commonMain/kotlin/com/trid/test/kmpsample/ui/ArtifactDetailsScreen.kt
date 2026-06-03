@@ -49,6 +49,7 @@ import com.trid.test.kmpsample.navigation.ArtifactDetailsUiEvent
 import com.trid.test.kmpsample.navigation.ArtifactDetailsUiState
 import com.trid.test.kmpsample.ui.components.ArtifactThumb
 import com.trid.test.kmpsample.ui.components.LabelChip
+import com.trid.test.kmpsample.ui.components.NavBackIcon
 import com.trid.test.kmpsample.ui.components.RarityChip
 import com.trid.test.kmpsample.ui.components.accentColor
 import com.trid.test.kmpsample.ui.components.formatCurrency
@@ -85,13 +86,10 @@ fun ArtifactDetailsScreenUi(
                 )
             },
             navigationIcon = {
-                IconButton(onClick = { state.eventSink(ArtifactDetailsUiEvent.Back) }) {
-                    Text(
-                        "←",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
+                NavBackIcon(
+                    onClick = { state.eventSink(ArtifactDetailsUiEvent.Back) },
+                    modifier = Modifier.padding(start = 4.dp),
+                )
             },
             actions = {
                 if (artifact != null) {

@@ -359,7 +359,7 @@ fun LoadingScreen() {
 
             // Layer 5: thematic caption (Cinzel via titleMedium).
             Text(
-                text = "Polishing the treasures...",
+                text = "Preparing your collection...",
                 style = MaterialTheme.typography.titleMedium,
                 color = AppAccent.Papyrus,
                 textAlign = TextAlign.Center,

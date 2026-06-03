@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -31,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import com.trid.test.kmpsample.navigation.ShowcaseUiEvent
 import com.trid.test.kmpsample.navigation.ShowcaseUiState
 import com.trid.test.kmpsample.ui.components.EmptyState
+import com.trid.test.kmpsample.ui.components.NavBackIcon
 import mic_kmp_sample.composeapp.generated.resources.Res
 import mic_kmp_sample.composeapp.generated.resources.ic_eye
 import org.jetbrains.compose.resources.painterResource
@@ -80,6 +82,7 @@ fun ShowcaseScreenUi(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            NavBackIcon(onClick = { state.eventSink(ShowcaseUiEvent.Back) })
             Image(
                 painter = painterResource(Res.drawable.ic_eye),
                 contentDescription = null,
@@ -92,7 +95,7 @@ fun ShowcaseScreenUi(
                     color = MaterialTheme.colorScheme.onBackground,
                 )
                 Text(
-                    "Your most treasured pieces",
+                    "Your highlighted items",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -126,14 +129,21 @@ fun ShowcaseScreenUi(
 
         if (displayed.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                EmptyState(
-                    title = if (query.isBlank()) "No highlights yet" else "No matches",
-                    subtitle = if (query.isBlank()) {
-                        "Favorite artifacts to feature them here."
-                    } else {
-                        "Try a different search term."
-                    },
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    EmptyState(
+                        title = if (query.isBlank()) "No highlights yet" else "No matches",
+                        subtitle = if (query.isBlank()) {
+                            "Favorite items to feature them here, or add your first item."
+                        } else {
+                            "Try a different search term."
+                        },
+                    )
+                    if (query.isBlank()) {
+                        Button(onClick = { state.eventSink(ShowcaseUiEvent.OpenAddArtifact) }) {
+                            Text("Add item")
+                        }
+                    }
+                }
             }
         } else {
             LazyVerticalGrid(

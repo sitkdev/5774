@@ -15,21 +15,14 @@ import kotlin.random.Random
  * - **Persistence:** all reads/writes go through [StorageHelper] with
  *   `encrypted = true` (Android EncryptedSharedPreferences / iOS Keychain) —
  *   the user requires every piece of app data to be encrypted at rest.
- * - **Seeding:** on first launch (when the encrypted `seeded` flag is false and
- *   nothing is stored) it generates a deterministic demo catalog and persists
- *   it, then flips the flag so seeding never repeats.
- *
- * Determinism: ids and varied fields are derived from a fixed-seed
- * [Random] and a constant [baseEpochMillis] base time offset by index, so a
- * clean install always produces the same catalog. The media/wiring agent can
- * replace [baseEpochMillis] with a real clock later.
+ * - Fresh installs start empty: users create their own collections and artifacts.
+ *   Legacy seed-only data from earlier builds is removed only when it is safely
+ *   identifiable, so user-created data is never wiped accidentally.
  *
  * Registered as a Koin `single` via `dataModule` in `di/Koin.kt`.
  */
 class CollectionsRepository(
     private val storage: StorageHelper,
-    /** Base timestamp for seeded `dateAddedMillis`; kept constant for determinism. */
-    private val baseEpochMillis: Long = DEFAULT_BASE_EPOCH_MILLIS,
 ) {
 
     private val _collections = MutableStateFlow<List<Collection>>(emptyList())
@@ -51,17 +44,25 @@ class CollectionsRepository(
             storage.getObject<List<Artifact>>(KEY_ARTIFACTS, encrypted = true).orEmpty()
         val seeded = storage.getBoolean(KEY_SEEDED, default = false, encrypted = true)
 
-        if (!seeded && storedCollections.isEmpty() && storedArtifacts.isEmpty()) {
-            val (seedCollections, seedArtifacts) = buildSeedData()
-            _collections.value = seedCollections
-            _artifacts.value = seedArtifacts
-            persistCollections()
-            persistArtifacts()
-            storage.putBoolean(KEY_SEEDED, value = true, encrypted = true)
+        if (seeded && isLegacySeedOnly(storedCollections, storedArtifacts)) {
+            storage.remove(KEY_COLLECTIONS, encrypted = true)
+            storage.remove(KEY_ARTIFACTS, encrypted = true)
+            storage.remove(KEY_SEEDED, encrypted = true)
+            _collections.value = emptyList()
+            _artifacts.value = emptyList()
         } else {
             _collections.value = storedCollections
             _artifacts.value = storedArtifacts
         }
+    }
+
+    private fun isLegacySeedOnly(
+        collections: List<Collection>,
+        artifacts: List<Artifact>,
+    ): Boolean {
+        if (collections.isEmpty() && artifacts.isEmpty()) return false
+        return collections.all { it.id in LEGACY_SEED_COLLECTION_IDS } &&
+            artifacts.all { it.id.startsWith(LEGACY_SEED_ARTIFACT_PREFIX) }
     }
 
     private fun persistCollections() {
@@ -166,152 +167,18 @@ class CollectionsRepository(
         persistArtifacts()
     }
 
-    /**
-     * Generates a fresh id. The wiring agent may swap this for a real uuid; the
-     * seeded ids are stable while runtime-created ids use a fixed-seed [Random]
-     * plus a monotonic counter so they never collide within a session.
-     */
-    fun newId(prefix: String = "art"): String =
-        "$prefix-${idCounter++}-${idRandom.nextInt(100_000, 999_999)}"
-
-    // endregion
-
-    // region Seed data (deterministic)
-
-    private fun buildSeedData(): Pair<List<Collection>, List<Artifact>> {
-        val rng = Random(SEED)
-
-        val collections = listOf(
-            Collection("col-coins", "Coins", "ic_coins"),
-            Collection("col-minerals", "Minerals", "ic_capsule"),
-            Collection("col-books", "Books", "ic_deco_emblem"),
-            Collection("col-figurines", "Figurines", "ic_vase"),
-            Collection("col-cards", "Cards", "ic_card"),
-        )
-
-        // Per-collection seed parameters: display category, icon used for items,
-        // a pool of evocative names, and tag pools.
-        val specs = listOf(
-            SeedSpec(
-                collection = collections[0],
-                category = "Coins",
-                icon = "ic_coins",
-                names = listOf(
-                    "Roman Denarius", "Byzantine Solidus", "Spanish Doubloon",
-                    "Greek Drachma", "Persian Daric", "Florentine Florin",
-                    "Saxon Penny", "Ottoman Akce", "Venetian Ducat",
-                ),
-                tagPool = listOf("ancient", "silver", "gold", "mint", "rare", "trade"),
-                valueRange = 20.0 to 4800.0,
-            ),
-            SeedSpec(
-                collection = collections[1],
-                category = "Minerals",
-                icon = "ic_capsule",
-                names = listOf(
-                    "Amethyst Geode", "Raw Pyrite", "Blue Azurite",
-                    "Smoky Quartz", "Malachite Cluster", "Labradorite Slab",
-                    "Rose Selenite", "Tourmaline Shard",
-                ),
-                tagPool = listOf("crystal", "raw", "polished", "fluorescent", "specimen"),
-                valueRange = 8.0 to 1200.0,
-            ),
-            SeedSpec(
-                collection = collections[2],
-                category = "Books",
-                icon = "ic_deco_emblem",
-                names = listOf(
-                    "First Folio Reprint", "Illuminated Psalter", "Pocket Almanac",
-                    "Cartographer's Atlas", "Leather Codex", "Naturalist Journal",
-                    "Vellum Manuscript",
-                ),
-                tagPool = listOf("antique", "leather", "signed", "first-edition", "vellum"),
-                valueRange = 15.0 to 3200.0,
-            ),
-            SeedSpec(
-                collection = collections[3],
-                category = "Figurines",
-                icon = "ic_vase",
-                names = listOf(
-                    "Jade Dragon", "Porcelain Crane", "Bronze Sphinx",
-                    "Marble Bust", "Carved Netsuke", "Terracotta Soldier",
-                    "Alabaster Idol", "Ivory Elephant",
-                ),
-                tagPool = listOf("hand-carved", "glazed", "limited", "antique", "display"),
-                valueRange = 12.0 to 2600.0,
-            ),
-            SeedSpec(
-                collection = collections[4],
-                category = "Cards",
-                icon = "ic_card",
-                names = listOf(
-                    "Holographic Charizard", "Vintage Tarot", "Baseball Rookie",
-                    "Foil Black Lotus", "Cigarette Card", "Silver Age Hero",
-                ),
-                tagPool = listOf("foil", "graded", "vintage", "mint", "trading"),
-                valueRange = 5.0 to 9500.0,
-            ),
-        )
-
-        val rarities = Rarity.entries
-        val conditions = listOf(35, 48, 60, 72, 80, 88, 94, 99)
-        val locations = listOf(
-            "Display Cabinet A", "Safe Box 1", "Drawer 3", "Wall Frame",
-            "Archive Shelf", "Velvet Tray", "Climate Vault",
-        )
-
-        val artifacts = mutableListOf<Artifact>()
-        var globalIndex = 0
-
-        for (spec in specs) {
-            val count = 6 + rng.nextInt(5) // 6..10
-            for (i in 0 until count) {
-                val name = spec.names[i % spec.names.size]
-                val rarity = rarities[rng.nextInt(rarities.size)]
-                val condition = conditions[rng.nextInt(conditions.size)]
-                val (lo, hi) = spec.valueRange
-                val value = roundCents(lo + rng.nextDouble() * (hi - lo))
-                val tagCount = 1 + rng.nextInt(3)
-                val tags = spec.tagPool.shuffled(rng).take(tagCount)
-                val location = locations[rng.nextInt(locations.size)]
-                // ~20% favorites, deterministically spread.
-                val favorite = (globalIndex % 5 == 0)
-                // Spread dates: each item one day earlier than the previous.
-                val dateMillis = baseEpochMillis - globalIndex.toLong() * DAY_MILLIS
-
-                artifacts += Artifact(
-                    id = "seed-${spec.collection.id}-$i",
-                    collectionId = spec.collection.id,
-                    name = name,
-                    description = "A ${rarity.name.lowercase()} ${spec.category.dropLast(1).lowercase()} " +
-                        "in well-kept condition. Part of the ${spec.collection.name} collection.",
-                    category = spec.category,
-                    rarity = rarity,
-                    condition = condition,
-                    value = value,
-                    storageLocation = location,
-                    tags = tags,
-                    images = listOf(ArtifactImage.Resource(spec.icon)),
-                    favorite = favorite,
-                    dateAddedMillis = dateMillis,
-                )
-                globalIndex++
-            }
+    /** Generates a fresh id and checks it against already persisted model ids. */
+    fun newId(prefix: String = "art"): String {
+        val existingIds = buildSet {
+            _collections.value.forEach { add(it.id) }
+            _artifacts.value.forEach { add(it.id) }
         }
-
-        return collections to artifacts
+        var candidate: String
+        do {
+            candidate = "$prefix-${currentTimeMillis()}-${Random.Default.nextInt(100_000, 999_999)}"
+        } while (candidate in existingIds)
+        return candidate
     }
-
-    private data class SeedSpec(
-        val collection: Collection,
-        val category: String,
-        val icon: String,
-        val names: List<String>,
-        val tagPool: List<String>,
-        val valueRange: Pair<Double, Double>,
-    )
-
-    private fun roundCents(v: Double): Double = (v * 100).toLong() / 100.0
 
     // endregion
 
@@ -320,16 +187,14 @@ class CollectionsRepository(
         private const val KEY_ARTIFACTS = "artifacts.v1"
         private const val KEY_SEEDED = "collections.seeded.v1"
 
-        /** Fixed RNG seed → deterministic seed catalog across installs. */
-        private const val SEED = 0x5773C0DE
+        private const val LEGACY_SEED_ARTIFACT_PREFIX = "seed-"
+        private val LEGACY_SEED_COLLECTION_IDS = setOf(
+            "col-coins",
+            "col-minerals",
+            "col-books",
+            "col-figurines",
+            "col-cards",
+        )
 
-        /** Constant base epoch for seeded timestamps (2024-01-01T00:00:00Z, ms). */
-        private const val DEFAULT_BASE_EPOCH_MILLIS = 1_704_067_200_000L
-
-        private const val DAY_MILLIS = 86_400_000L
-
-        // Runtime id generation (session-scoped, collision-free).
-        private var idCounter = 0
-        private val idRandom = Random(SEED xor 0x1234)
     }
 }

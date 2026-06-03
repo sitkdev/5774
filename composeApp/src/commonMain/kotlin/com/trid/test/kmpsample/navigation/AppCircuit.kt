@@ -72,8 +72,8 @@ fun buildAppCircuit(): Circuit =
             ArtifactDetailsScreenUi(state, modifier)
         }
         // --- Add artifact ---
-        .addPresenter<AddArtifactScreen, AddArtifactUiState> { _, navigator, _ ->
-            AddArtifactPresenter(navigator)
+        .addPresenter<AddArtifactScreen, AddArtifactUiState> { screen, navigator, _ ->
+            AddArtifactPresenter(screen.collectionId, navigator)
         }
         .addUi<AddArtifactScreen, AddArtifactUiState> { state, modifier ->
             AddArtifactScreenUi(state, modifier)

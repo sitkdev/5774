@@ -10,9 +10,12 @@ import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
 import com.trid.test.kmpsample.data.Artifact
+import com.trid.test.kmpsample.data.ArtifactImage
 import com.trid.test.kmpsample.data.Collection
 import com.trid.test.kmpsample.data.CollectionsRepository
 import com.trid.test.kmpsample.data.DashboardStats
+import com.trid.test.kmpsample.data.Rarity
+import com.trid.test.kmpsample.data.currentTimeMillis
 import kotlinx.coroutines.delay
 import org.koin.mp.KoinPlatform
 
@@ -24,6 +27,10 @@ import org.koin.mp.KoinPlatform
  */
 private fun repo(): CollectionsRepository =
     KoinPlatform.getKoin().get<CollectionsRepository>()
+
+private fun Navigator.popOrDashboard() {
+    if (peekBackStack().size > 1) pop() else resetRoot(DashboardScreen)
+}
 
 /** How long the splash holds before advancing into the app. */
 private const val LOADING_DELAY_MS = 2500L
@@ -147,7 +154,7 @@ class DashboardPresenter(
             when (event) {
                 DashboardUiEvent.OpenCollections -> navigator.goTo(CollectionsScreen)
                 DashboardUiEvent.OpenShowcase -> navigator.goTo(ShowcaseScreen)
-                DashboardUiEvent.OpenAddArtifact -> navigator.goTo(AddArtifactScreen)
+                DashboardUiEvent.OpenAddArtifact -> navigator.goTo(AddArtifactScreen())
                 is DashboardUiEvent.OpenArtifact ->
                     navigator.goTo(ArtifactDetailsScreen(event.artifactId))
             }
@@ -170,6 +177,7 @@ data class CollectionsUiState(
 
 sealed interface CollectionsUiEvent : CircuitUiEvent {
     data class OpenCollection(val collectionId: String) : CollectionsUiEvent
+    data object OpenAddArtifact : CollectionsUiEvent
     data object Back : CollectionsUiEvent
 }
 
@@ -183,7 +191,8 @@ class CollectionsPresenter(
             when (event) {
                 is CollectionsUiEvent.OpenCollection ->
                     navigator.goTo(CollectionArtifactsScreen(event.collectionId))
-                CollectionsUiEvent.Back -> navigator.pop()
+                CollectionsUiEvent.OpenAddArtifact -> navigator.goTo(AddArtifactScreen())
+                CollectionsUiEvent.Back -> navigator.popOrDashboard()
             }
         }
     }
@@ -202,6 +211,7 @@ data class CollectionArtifactsUiState(
 sealed interface CollectionArtifactsUiEvent : CircuitUiEvent {
     data class OpenArtifact(val artifactId: String) : CollectionArtifactsUiEvent
     data class ToggleFavorite(val artifactId: String) : CollectionArtifactsUiEvent
+    data object OpenAddArtifact : CollectionArtifactsUiEvent
     data object Back : CollectionArtifactsUiEvent
 }
 
@@ -231,7 +241,10 @@ class CollectionArtifactsPresenter(
                     navigator.goTo(ArtifactDetailsScreen(event.artifactId))
                 is CollectionArtifactsUiEvent.ToggleFavorite ->
                     repository.toggleFavorite(event.artifactId)
-                CollectionArtifactsUiEvent.Back -> navigator.pop()
+                CollectionArtifactsUiEvent.OpenAddArtifact -> navigator.goTo(
+                    AddArtifactScreen(collectionId = collectionId),
+                )
+                CollectionArtifactsUiEvent.Back -> navigator.popOrDashboard()
             }
         }
     }
@@ -268,9 +281,9 @@ class ArtifactDetailsPresenter(
                     repository.toggleFavorite(artifactId)
                 ArtifactDetailsUiEvent.Delete -> {
                     repository.removeArtifact(artifactId)
-                    navigator.pop()
+                    navigator.popOrDashboard()
                 }
-                ArtifactDetailsUiEvent.Back -> navigator.pop()
+                ArtifactDetailsUiEvent.Back -> navigator.popOrDashboard()
             }
         }
     }
@@ -282,16 +295,31 @@ class ArtifactDetailsPresenter(
 
 data class AddArtifactUiState(
     val collections: List<Collection>,
+    val preselectedCollectionId: String?,
     val eventSink: (AddArtifactUiEvent) -> Unit,
 ) : CircuitUiState
 
 sealed interface AddArtifactUiEvent : CircuitUiEvent {
-    /** Persist a fully-built artifact (the UI/media agents assemble it). */
-    data class Save(val artifact: Artifact) : AddArtifactUiEvent
+    data class Save(
+        val name: String,
+        val description: String,
+        val selectedCollectionId: String?,
+        val newCollectionName: String,
+        val category: String,
+        val rarity: Rarity,
+        val condition: Int,
+        val value: Double,
+        val storageLocation: String,
+        val images: List<ArtifactImage>,
+        val favorite: Boolean,
+        val dateAddedMillis: Long,
+    ) : AddArtifactUiEvent
+
     data object Cancel : AddArtifactUiEvent
 }
 
 class AddArtifactPresenter(
+    private val preselectedCollectionId: String?,
     private val navigator: Navigator,
 ) : Presenter<AddArtifactUiState> {
     @Composable
@@ -299,15 +327,67 @@ class AddArtifactPresenter(
         val repository = repo()
         val collections by repository.collections.collectAsState()
 
-        return AddArtifactUiState(collections = collections) { event ->
+        return AddArtifactUiState(
+            collections = collections,
+            preselectedCollectionId = preselectedCollectionId,
+        ) { event ->
             when (event) {
                 is AddArtifactUiEvent.Save -> {
-                    repository.addArtifact(event.artifact)
-                    navigator.pop()
+                    val targetCollection = resolveTargetCollection(repository, event)
+                    if (targetCollection != null) {
+                        val artifactImages = event.images.ifEmpty {
+                            listOf(ArtifactImage.Resource(targetCollection.iconKey))
+                        }
+                        repository.addArtifact(
+                            Artifact(
+                                id = repository.newId("art"),
+                                collectionId = targetCollection.id,
+                                name = event.name.trim(),
+                                description = event.description.trim(),
+                                category = event.category,
+                                rarity = event.rarity,
+                                condition = event.condition,
+                                value = event.value,
+                                storageLocation = event.storageLocation.trim().ifBlank { "Unsorted" },
+                                tags = emptyList(),
+                                images = artifactImages,
+                                favorite = event.favorite,
+                                dateAddedMillis = event.dateAddedMillis.takeIf { it > 0L }
+                                    ?: currentTimeMillis(),
+                            ),
+                        )
+                        navigator.popOrDashboard()
+                    }
                 }
-                AddArtifactUiEvent.Cancel -> navigator.pop()
+                AddArtifactUiEvent.Cancel -> navigator.popOrDashboard()
             }
         }
+    }
+
+    private fun resolveTargetCollection(
+        repository: CollectionsRepository,
+        event: AddArtifactUiEvent.Save,
+    ): Collection? {
+        val newCollectionName = event.newCollectionName.trim()
+        if (newCollectionName.isNotEmpty()) {
+            val collection = Collection(
+                id = repository.newId("col"),
+                name = newCollectionName,
+                iconKey = iconKeyForCategory(event.category),
+            )
+            repository.addCollection(collection)
+            return collection
+        }
+        return event.selectedCollectionId?.let(repository::collection)
+    }
+
+    private fun iconKeyForCategory(category: String): String = when (category.lowercase()) {
+        "coins" -> "ic_coins"
+        "minerals" -> "ic_capsule"
+        "books" -> "ic_deco_emblem"
+        "figurines" -> "ic_vase"
+        "cards" -> "ic_card"
+        else -> "ic_ornament"
     }
 }
 
@@ -322,6 +402,7 @@ data class ShowcaseUiState(
 
 sealed interface ShowcaseUiEvent : CircuitUiEvent {
     data class OpenArtifact(val artifactId: String) : ShowcaseUiEvent
+    data object OpenAddArtifact : ShowcaseUiEvent
     data object Back : ShowcaseUiEvent
 }
 
@@ -343,7 +424,8 @@ class ShowcasePresenter(
             when (event) {
                 is ShowcaseUiEvent.OpenArtifact ->
                     navigator.goTo(ArtifactDetailsScreen(event.artifactId))
-                ShowcaseUiEvent.Back -> navigator.pop()
+                ShowcaseUiEvent.OpenAddArtifact -> navigator.goTo(AddArtifactScreen())
+                ShowcaseUiEvent.Back -> navigator.popOrDashboard()
             }
         }
     }
