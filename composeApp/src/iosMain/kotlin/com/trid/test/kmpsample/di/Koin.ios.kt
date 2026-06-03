@@ -3,6 +3,8 @@ package com.trid.test.kmpsample.di
 import com.russhwolf.settings.ExperimentalSettingsImplementation
 import com.russhwolf.settings.KeychainSettings
 import com.russhwolf.settings.NSUserDefaultsSettings
+import com.trid.test.kmpsample.media.ArtifactImageStore
+import com.trid.test.kmpsample.media.IosArtifactImageStore
 import com.trid.test.kmpsample.storage.SettingsFactory
 import org.koin.core.module.Module
 import org.koin.dsl.module
@@ -32,4 +34,8 @@ actual fun platformStorageModule(): Module = module {
             }
         }
     }
+}
+
+actual fun platformImageStoreModule(): Module = module {
+    single<ArtifactImageStore> { IosArtifactImageStore() }
 }

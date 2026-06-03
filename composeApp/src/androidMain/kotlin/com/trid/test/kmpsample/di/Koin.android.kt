@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.russhwolf.settings.SharedPreferencesSettings
+import com.trid.test.kmpsample.media.AndroidArtifactImageStore
+import com.trid.test.kmpsample.media.ArtifactImageStore
 import com.trid.test.kmpsample.storage.SettingsFactory
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module
@@ -38,4 +40,8 @@ actual fun platformStorageModule(): Module = module {
             SharedPreferencesSettings(prefs)
         }
     }
+}
+
+actual fun platformImageStoreModule(): Module = module {
+    single<ArtifactImageStore> { AndroidArtifactImageStore(androidContext()) }
 }

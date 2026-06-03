@@ -1,6 +1,7 @@
 package com.trid.test.kmpsample.data
 
 import com.trid.test.kmpsample.storage.StorageHelper
+import com.trid.test.kmpsample.media.ArtifactImageStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +24,7 @@ import kotlin.random.Random
  */
 class CollectionsRepository(
     private val storage: StorageHelper,
+    private val imageStore: ArtifactImageStore,
 ) {
 
     private val _collections = MutableStateFlow<List<Collection>>(emptyList())
@@ -151,6 +153,7 @@ class CollectionsRepository(
     }
 
     fun removeArtifact(id: String) {
+        _artifacts.value.firstOrNull { it.id == id }?.deleteStoredImages()
         _artifacts.value = _artifacts.value.filterNot { it.id == id }
         persistArtifacts()
     }
@@ -161,10 +164,17 @@ class CollectionsRepository(
     }
 
     fun removeCollection(id: String) {
+        _artifacts.value.filter { it.collectionId == id }.forEach { it.deleteStoredImages() }
         _collections.value = _collections.value.filterNot { it.id == id }
         _artifacts.value = _artifacts.value.filterNot { it.collectionId == id }
         persistCollections()
         persistArtifacts()
+    }
+
+    private fun Artifact.deleteStoredImages() {
+        images.forEach { image ->
+            if (image is ArtifactImage.Stored) imageStore.delete(image.id)
+        }
     }
 
     /** Generates a fresh id and checks it against already persisted model ids. */

@@ -48,6 +48,10 @@ fun AppNavHost() {
 
     CircuitCompositionLocals(circuit) {
         CompositionLocalProvider(LocalGuardedNavigator provides guardedNavigator) {
+            PlatformBackHandler(enabled = backStack.size > 1) {
+                guardedNavigator.pop()
+            }
+
             RootScaffold(){ paddingValues ->
                 NavigableCircuitContent(
                     modifier = Modifier.padding(paddingValues),

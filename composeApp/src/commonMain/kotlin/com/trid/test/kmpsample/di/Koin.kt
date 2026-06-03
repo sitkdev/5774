@@ -1,6 +1,7 @@
 package com.trid.test.kmpsample.di
 
 import com.trid.test.kmpsample.data.CollectionsRepository
+import com.trid.test.kmpsample.media.ArtifactImageStore
 import com.trid.test.kmpsample.storage.StorageHelper
 import org.koin.core.context.startKoin
 import org.koin.core.module.Module
@@ -14,6 +15,9 @@ import org.koin.mp.KoinPlatform
  */
 expect fun platformStorageModule(): Module
 
+/** Provides the platform app-private image file store. */
+expect fun platformImageStoreModule(): Module
+
 /**
  * Shared DI graph. [StorageHelper] is a process singleton built from the
  * platform-provided `SettingsFactory`.
@@ -24,11 +28,12 @@ val storageModule: Module = module {
 
 /**
  * Data graph. [CollectionsRepository] is a process singleton built on top of
- * [StorageHelper]; it owns the user-created collections/artifacts state.
+ * [StorageHelper] and [ArtifactImageStore]; it owns user-created
+ * collections/artifacts state and cleans up stored photo files on deletion.
  * Presenters obtain it via `KoinPlatform.getKoin().get<CollectionsRepository>()`.
  */
 val dataModule: Module = module {
-    single { CollectionsRepository(get()) }
+    single { CollectionsRepository(get(), get()) }
 }
 
 /**
@@ -42,6 +47,6 @@ fun initKoin(appDeclaration: KoinAppDeclaration = {}) {
     if (KoinPlatform.getKoinOrNull() != null) return
     startKoin {
         appDeclaration()
-        modules(platformStorageModule(), storageModule, dataModule)
+        modules(platformStorageModule(), platformImageStoreModule(), storageModule, dataModule)
     }
 }

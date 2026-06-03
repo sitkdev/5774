@@ -47,19 +47,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import com.trid.test.kmpsample.data.ArtifactImage
 import com.trid.test.kmpsample.data.Collection
 import com.trid.test.kmpsample.data.Rarity
 import com.trid.test.kmpsample.media.rememberCameraPicker
 import com.trid.test.kmpsample.media.rememberGalleryPicker
 import com.trid.test.kmpsample.navigation.AddArtifactUiEvent
 import com.trid.test.kmpsample.navigation.AddArtifactUiState
-import com.trid.test.kmpsample.ui.components.ArtifactThumb
 import com.trid.test.kmpsample.ui.components.NavBackIcon
 import com.trid.test.kmpsample.ui.components.RarityChip
 import com.trid.test.kmpsample.ui.components.accentColor
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
+import coil3.compose.AsyncImage
 
 private val CATEGORIES = listOf("Coins", "Minerals", "Books", "Figurines", "Cards", "Misc")
 
@@ -67,9 +64,10 @@ private val CATEGORIES = listOf("Coins", "Minerals", "Books", "Figurines", "Card
  * Add-artifact form showcasing Material3 inputs: OutlinedTextFields, two
  * ExposedDropdownMenuBox dropdowns (collection + category), a condition Slider,
  * a value Slider, a favorite Switch, a rarity RadioButton group and a
- * DatePicker dialog. Camera/Gallery buttons attach user images as encrypted data.
+ * DatePicker dialog. Camera/Gallery buttons keep picked images in memory for
+ * preview; the presenter writes them to app-private files on save.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalEncodingApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddArtifactScreenUi(
     state: AddArtifactUiState,
@@ -77,11 +75,11 @@ fun AddArtifactScreenUi(
 ) {
     val collections = state.collections
 
-    // User-captured/selected images, base64-encoded for JSON persistence.
-    val images = remember { mutableStateListOf<ArtifactImage.Bytes>() }
+    // User-captured/selected images for preview only. Do not base64-persist them.
+    val images = remember { mutableStateListOf<ByteArray>() }
     val onPicked: (ByteArray?) -> Unit = { bytes ->
         if (bytes != null) {
-            images.add(ArtifactImage.Bytes(Base64.encode(bytes)))
+            images.add(bytes)
         }
     }
     val cameraPicker = rememberCameraPicker(onPicked)
@@ -335,7 +333,7 @@ fun AddArtifactScreenUi(
                                 condition = condition.toInt(),
                                 value = value.toDouble(),
                                 storageLocation = storage,
-                                images = images.toList(),
+                                imageBytes = images.toList(),
                                 favorite = favorite,
                                 dateAddedMillis = dateMillis ?: 0L,
                             ),
@@ -464,7 +462,7 @@ private fun CategoryDropdown(
 }
 
 @Composable
-private fun ImagePreviewRow(images: List<ArtifactImage.Bytes>) {
+private fun ImagePreviewRow(images: List<ByteArray>) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (images.isEmpty()) {
             item {
@@ -491,8 +489,9 @@ private fun ImagePreviewRow(images: List<ArtifactImage.Bytes>) {
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                     contentAlignment = Alignment.Center,
                 ) {
-                    ArtifactThumb(
-                        image = images[index],
+                    AsyncImage(
+                        model = images[index],
+                        contentDescription = null,
                         modifier = Modifier.size(80.dp),
                         contentScale = ContentScale.Crop,
                     )

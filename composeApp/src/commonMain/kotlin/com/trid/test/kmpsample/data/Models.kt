@@ -42,8 +42,10 @@ enum class Rarity {
  * The visual for an artifact. Either:
  *  - [Resource]: a bundled drawable referenced by its generated-accessor [name]
  *    (e.g. `"ic_coins"`); resolve with [resolveDrawable].
- *  - [Bytes]: user-supplied image bytes, base64-encoded for JSON persistence
- *    (created from the gallery/camera picker).
+ *  - [Stored]: a user-supplied image stored as an app-private file; only the
+ *    lightweight file [id] is persisted in encrypted metadata.
+ *  - [Bytes]: legacy user-supplied image bytes, base64-encoded in JSON. Kept
+ *    only so old persisted entries can still load; new photos must use [Stored].
  */
 @Serializable
 sealed interface ArtifactImage {
@@ -55,6 +57,10 @@ sealed interface ArtifactImage {
     @Serializable
     @SerialName("bytes")
     data class Bytes(val base64: String) : ArtifactImage
+
+    @Serializable
+    @SerialName("stored")
+    data class Stored(val id: String) : ArtifactImage
 }
 
 /**
@@ -127,8 +133,8 @@ object DrawableKeys {
 
 /**
  * Resolves an [ArtifactImage.Resource] name to a [DrawableResource].
- * For [ArtifactImage.Bytes] callers should decode the base64 separately; this
- * helper covers only bundled resources.
+ * For [ArtifactImage.Stored] / [ArtifactImage.Bytes] callers should load the
+ * bytes separately; this helper covers only bundled resources.
  */
 fun ArtifactImage.Resource.resolveDrawable(): DrawableResource =
     DrawableKeys.resolve(name)

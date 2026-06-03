@@ -28,12 +28,14 @@ import com.trid.test.kmpsample.data.ArtifactImage
 import com.trid.test.kmpsample.data.DrawableKeys
 import com.trid.test.kmpsample.data.Rarity
 import com.trid.test.kmpsample.data.resolveDrawable
+import com.trid.test.kmpsample.media.ArtifactImageStore
 import com.trid.test.kmpsample.ui.theme.AppAccent
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import mic_kmp_sample.composeapp.generated.resources.Res
 import mic_kmp_sample.composeapp.generated.resources.ic_open_box
 import mic_kmp_sample.composeapp.generated.resources.ic_ornament
+import org.koin.mp.KoinPlatform
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 
@@ -62,10 +64,10 @@ fun formatCurrency(value: Double): String {
 /**
  * Renders an [ArtifactImage]:
  *  - [ArtifactImage.Resource]: bundled drawable drawn via [painterResource].
- *  - [ArtifactImage.Bytes]: user-supplied bytes — the base64 payload is decoded
- *    to a [ByteArray] and loaded through Coil3 ([AsyncImage], which accepts a
- *    ByteArray model on both Android and iOS).
- *  - `null` / undecodable bytes: the open-box placeholder.
+ *  - [ArtifactImage.Stored]: user-supplied photo loaded from app-private files.
+ *  - [ArtifactImage.Bytes]: legacy base64 payload decoded as compatibility
+ *    fallback only.
+ *  - `null` / missing / undecodable bytes: the open-box placeholder.
  */
 @OptIn(ExperimentalEncodingApi::class)
 @Composable
@@ -75,9 +77,26 @@ fun ArtifactThumb(
     contentScale: ContentScale = ContentScale.Fit,
 ) {
     when (image) {
+        is ArtifactImage.Stored -> {
+            val store = remember { KoinPlatform.getKoin().get<ArtifactImageStore>() }
+            val bytes: ByteArray? = remember(image.id) { store.load(image.id) }
+            if (bytes != null) {
+                AsyncImage(
+                    model = bytes,
+                    contentDescription = null,
+                    contentScale = contentScale,
+                    modifier = modifier,
+                )
+            } else {
+                PlaceholderImage(contentScale, modifier)
+            }
+        }
+
         is ArtifactImage.Bytes -> {
             val bytes: ByteArray? = remember(image.base64) {
-                runCatching { Base64.decode(image.base64) }.getOrNull()
+                image.base64
+                    .takeIf { it.length <= MAX_LEGACY_BASE64_IMAGE_CHARS }
+                    ?.let { runCatching { Base64.decode(it) }.getOrNull() }
             }
             if (bytes != null) {
                 AsyncImage(
@@ -101,6 +120,8 @@ fun ArtifactThumb(
         null -> PlaceholderImage(contentScale, modifier)
     }
 }
+
+private const val MAX_LEGACY_BASE64_IMAGE_CHARS = 8_000_000
 
 @Composable
 private fun PlaceholderImage(contentScale: ContentScale, modifier: Modifier) {

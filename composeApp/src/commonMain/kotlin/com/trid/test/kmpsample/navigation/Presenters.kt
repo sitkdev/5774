@@ -16,6 +16,7 @@ import com.trid.test.kmpsample.data.CollectionsRepository
 import com.trid.test.kmpsample.data.DashboardStats
 import com.trid.test.kmpsample.data.Rarity
 import com.trid.test.kmpsample.data.currentTimeMillis
+import com.trid.test.kmpsample.media.ArtifactImageStore
 import kotlinx.coroutines.delay
 import org.koin.mp.KoinPlatform
 
@@ -27,6 +28,9 @@ import org.koin.mp.KoinPlatform
  */
 private fun repo(): CollectionsRepository =
     KoinPlatform.getKoin().get<CollectionsRepository>()
+
+private fun imageStore(): ArtifactImageStore =
+    KoinPlatform.getKoin().get<ArtifactImageStore>()
 
 private fun Navigator.popOrDashboard() {
     if (peekBackStack().size > 1) pop() else resetRoot(DashboardScreen)
@@ -310,7 +314,7 @@ sealed interface AddArtifactUiEvent : CircuitUiEvent {
         val condition: Int,
         val value: Double,
         val storageLocation: String,
-        val images: List<ArtifactImage>,
+        val imageBytes: List<ByteArray>,
         val favorite: Boolean,
         val dateAddedMillis: Long,
     ) : AddArtifactUiEvent
@@ -325,6 +329,7 @@ class AddArtifactPresenter(
     @Composable
     override fun present(): AddArtifactUiState {
         val repository = repo()
+        val imageStore = imageStore()
         val collections by repository.collections.collectAsState()
 
         return AddArtifactUiState(
@@ -335,7 +340,10 @@ class AddArtifactPresenter(
                 is AddArtifactUiEvent.Save -> {
                     val targetCollection = resolveTargetCollection(repository, event)
                     if (targetCollection != null) {
-                        val artifactImages = event.images.ifEmpty {
+                        val storedImages = event.imageBytes.mapNotNull { bytes ->
+                            runCatching { imageStore.save(bytes) }.getOrNull()
+                        }
+                        val artifactImages = storedImages.ifEmpty {
                             listOf(ArtifactImage.Resource(targetCollection.iconKey))
                         }
                         repository.addArtifact(

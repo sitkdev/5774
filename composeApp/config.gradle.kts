@@ -1,4 +1,4 @@
-extra["app_name"] = "CHANGE NAME"
+extra["app_name"] = "Collectra"
 extra["bundle"] = "com.choicehotels.andr"
 
 extra["isMinifyEnabled"] = true
