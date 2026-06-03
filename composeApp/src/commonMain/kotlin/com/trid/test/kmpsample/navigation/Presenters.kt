@@ -1,10 +1,32 @@
 package com.trid.test.kmpsample.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
 import com.slack.circuit.runtime.Navigator
 import com.slack.circuit.runtime.presenter.Presenter
+import com.trid.test.kmpsample.data.Artifact
+import com.trid.test.kmpsample.data.Collection
+import com.trid.test.kmpsample.data.CollectionsRepository
+import com.trid.test.kmpsample.data.DashboardStats
+import kotlinx.coroutines.delay
+import org.koin.mp.KoinPlatform
+
+/**
+ * KMP-safe Koin accessor for presenters. Circuit constructs presenters outside
+ * any composable, so we pull singletons from the global Koin instance rather
+ * than injecting through the constructor (keeps `AppCircuit` registration
+ * trivial and iOS-safe).
+ */
+private fun repo(): CollectionsRepository =
+    KoinPlatform.getKoin().get<CollectionsRepository>()
+
+/** How long the splash holds before advancing into the app. */
+private const val LOADING_DELAY_MS = 2500L
 
 /**
  * Presenters for the navigation skeleton.
@@ -38,14 +60,24 @@ class LoadingPresenter(
 ) : Presenter<LoadingUiState> {
     @Composable
     override fun present(): LoadingUiState {
-        return LoadingUiState { event ->
+        // Drive the one-shot advance: after a short splash, fire Ready. The real
+        // startup check (connectivity, warm-up) can replace the delay later and
+        // route through NoConnection instead.
+        val sink: (LoadingUiEvent) -> Unit = { event ->
             when (event) {
                 // resetRoot wipes Loading from the backstack so back-press can
                 // never return to it — Loading is a one-shot entry point.
-                LoadingUiEvent.Ready -> navigator.resetRoot(HomeScreen)
+                LoadingUiEvent.Ready -> navigator.resetRoot(DashboardScreen)
                 LoadingUiEvent.NoConnection -> navigator.goTo(NoConnectionScreen)
             }
         }
+
+        LaunchedEffect(Unit) {
+            delay(LOADING_DELAY_MS)
+            sink(LoadingUiEvent.Ready)
+        }
+
+        return LoadingUiState(sink)
     }
 }
 
@@ -79,21 +111,245 @@ class NoConnectionPresenter(
 
 // endregion
 
-// region Home
+// region Dashboard (hub)
 
-data class HomeUiState(
-    val eventSink: (HomeUiEvent) -> Unit,
+data class DashboardUiState(
+    val stats: DashboardStats,
+    val recent: List<Artifact>,
+    val eventSink: (DashboardUiEvent) -> Unit,
 ) : CircuitUiState
 
-sealed interface HomeUiEvent : CircuitUiEvent
+sealed interface DashboardUiEvent : CircuitUiEvent {
+    data object OpenCollections : DashboardUiEvent
+    data object OpenShowcase : DashboardUiEvent
+    data object OpenAddArtifact : DashboardUiEvent
+    data class OpenArtifact(val artifactId: String) : DashboardUiEvent
+}
 
-class HomePresenter(
-    @Suppress("unused") private val navigator: Navigator,
-) : Presenter<HomeUiState> {
+class DashboardPresenter(
+    private val navigator: Navigator,
+) : Presenter<DashboardUiState> {
     @Composable
-    override fun present(): HomeUiState {
-        // Placeholder: no child destinations wired yet.
-        return HomeUiState { }
+    override fun present(): DashboardUiState {
+        val repository = repo()
+        // Observe reactively so added/removed/favorited items refresh the hub.
+        val artifacts by repository.artifacts.collectAsState()
+        val collections by repository.collections.collectAsState()
+
+        // Recompute derived values whenever the underlying lists change.
+        val stats = remember(artifacts, collections) { repository.dashboardStats() }
+        val recent = remember(artifacts) { repository.recent(RECENT_COUNT) }
+
+        return DashboardUiState(
+            stats = stats,
+            recent = recent,
+        ) { event ->
+            when (event) {
+                DashboardUiEvent.OpenCollections -> navigator.goTo(CollectionsScreen)
+                DashboardUiEvent.OpenShowcase -> navigator.goTo(ShowcaseScreen)
+                DashboardUiEvent.OpenAddArtifact -> navigator.goTo(AddArtifactScreen)
+                is DashboardUiEvent.OpenArtifact ->
+                    navigator.goTo(ArtifactDetailsScreen(event.artifactId))
+            }
+        }
+    }
+
+    private companion object {
+        const val RECENT_COUNT = 6
+    }
+}
+
+// endregion
+
+// region Collections
+
+data class CollectionsUiState(
+    val collections: List<Collection>,
+    val eventSink: (CollectionsUiEvent) -> Unit,
+) : CircuitUiState
+
+sealed interface CollectionsUiEvent : CircuitUiEvent {
+    data class OpenCollection(val collectionId: String) : CollectionsUiEvent
+    data object Back : CollectionsUiEvent
+}
+
+class CollectionsPresenter(
+    private val navigator: Navigator,
+) : Presenter<CollectionsUiState> {
+    @Composable
+    override fun present(): CollectionsUiState {
+        val collections by repo().collections.collectAsState()
+        return CollectionsUiState(collections = collections) { event ->
+            when (event) {
+                is CollectionsUiEvent.OpenCollection ->
+                    navigator.goTo(CollectionArtifactsScreen(event.collectionId))
+                CollectionsUiEvent.Back -> navigator.pop()
+            }
+        }
+    }
+}
+
+// endregion
+
+// region CollectionArtifacts
+
+data class CollectionArtifactsUiState(
+    val collection: Collection?,
+    val artifacts: List<Artifact>,
+    val eventSink: (CollectionArtifactsUiEvent) -> Unit,
+) : CircuitUiState
+
+sealed interface CollectionArtifactsUiEvent : CircuitUiEvent {
+    data class OpenArtifact(val artifactId: String) : CollectionArtifactsUiEvent
+    data class ToggleFavorite(val artifactId: String) : CollectionArtifactsUiEvent
+    data object Back : CollectionArtifactsUiEvent
+}
+
+class CollectionArtifactsPresenter(
+    private val collectionId: String,
+    private val navigator: Navigator,
+) : Presenter<CollectionArtifactsUiState> {
+    @Composable
+    override fun present(): CollectionArtifactsUiState {
+        val repository = repo()
+        val allArtifacts by repository.artifacts.collectAsState()
+        val allCollections by repository.collections.collectAsState()
+
+        val collection = remember(allCollections, collectionId) {
+            repository.collection(collectionId)
+        }
+        val artifacts = remember(allArtifacts, collectionId) {
+            repository.artifactsIn(collectionId)
+        }
+
+        return CollectionArtifactsUiState(
+            collection = collection,
+            artifacts = artifacts,
+        ) { event ->
+            when (event) {
+                is CollectionArtifactsUiEvent.OpenArtifact ->
+                    navigator.goTo(ArtifactDetailsScreen(event.artifactId))
+                is CollectionArtifactsUiEvent.ToggleFavorite ->
+                    repository.toggleFavorite(event.artifactId)
+                CollectionArtifactsUiEvent.Back -> navigator.pop()
+            }
+        }
+    }
+}
+
+// endregion
+
+// region ArtifactDetails
+
+data class ArtifactDetailsUiState(
+    val artifact: Artifact?,
+    val eventSink: (ArtifactDetailsUiEvent) -> Unit,
+) : CircuitUiState
+
+sealed interface ArtifactDetailsUiEvent : CircuitUiEvent {
+    data object ToggleFavorite : ArtifactDetailsUiEvent
+    data object Delete : ArtifactDetailsUiEvent
+    data object Back : ArtifactDetailsUiEvent
+}
+
+class ArtifactDetailsPresenter(
+    private val artifactId: String,
+    private val navigator: Navigator,
+) : Presenter<ArtifactDetailsUiState> {
+    @Composable
+    override fun present(): ArtifactDetailsUiState {
+        val repository = repo()
+        val allArtifacts by repository.artifacts.collectAsState()
+        val artifact = remember(allArtifacts, artifactId) { repository.artifact(artifactId) }
+
+        return ArtifactDetailsUiState(artifact = artifact) { event ->
+            when (event) {
+                ArtifactDetailsUiEvent.ToggleFavorite ->
+                    repository.toggleFavorite(artifactId)
+                ArtifactDetailsUiEvent.Delete -> {
+                    repository.removeArtifact(artifactId)
+                    navigator.pop()
+                }
+                ArtifactDetailsUiEvent.Back -> navigator.pop()
+            }
+        }
+    }
+}
+
+// endregion
+
+// region AddArtifact
+
+data class AddArtifactUiState(
+    val collections: List<Collection>,
+    val eventSink: (AddArtifactUiEvent) -> Unit,
+) : CircuitUiState
+
+sealed interface AddArtifactUiEvent : CircuitUiEvent {
+    /** Persist a fully-built artifact (the UI/media agents assemble it). */
+    data class Save(val artifact: Artifact) : AddArtifactUiEvent
+    data object Cancel : AddArtifactUiEvent
+}
+
+class AddArtifactPresenter(
+    private val navigator: Navigator,
+) : Presenter<AddArtifactUiState> {
+    @Composable
+    override fun present(): AddArtifactUiState {
+        val repository = repo()
+        val collections by repository.collections.collectAsState()
+
+        return AddArtifactUiState(collections = collections) { event ->
+            when (event) {
+                is AddArtifactUiEvent.Save -> {
+                    repository.addArtifact(event.artifact)
+                    navigator.pop()
+                }
+                AddArtifactUiEvent.Cancel -> navigator.pop()
+            }
+        }
+    }
+}
+
+// endregion
+
+// region Showcase
+
+data class ShowcaseUiState(
+    val highlights: List<Artifact>,
+    val eventSink: (ShowcaseUiEvent) -> Unit,
+) : CircuitUiState
+
+sealed interface ShowcaseUiEvent : CircuitUiEvent {
+    data class OpenArtifact(val artifactId: String) : ShowcaseUiEvent
+    data object Back : ShowcaseUiEvent
+}
+
+class ShowcasePresenter(
+    private val navigator: Navigator,
+) : Presenter<ShowcaseUiState> {
+    @Composable
+    override fun present(): ShowcaseUiState {
+        val repository = repo()
+        val allArtifacts by repository.artifacts.collectAsState()
+        // Highlights = favorites first, then highest-value items as a fallback.
+        val highlights = remember(allArtifacts) {
+            repository.favorites.ifEmpty {
+                repository.sortedByValue(allArtifacts).take(SHOWCASE_COUNT)
+            }
+        }
+
+        return ShowcaseUiState(highlights = highlights) { event ->
+            when (event) {
+                is ShowcaseUiEvent.OpenArtifact ->
+                    navigator.goTo(ArtifactDetailsScreen(event.artifactId))
+                ShowcaseUiEvent.Back -> navigator.pop()
+            }
+        }
+    }
+
+    private companion object {
+        const val SHOWCASE_COUNT = 10
     }
 }
 

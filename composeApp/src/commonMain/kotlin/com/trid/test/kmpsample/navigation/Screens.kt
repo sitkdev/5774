@@ -5,15 +5,24 @@ import com.slack.circuit.runtime.screen.Screen
 /**
  * Type-safe Circuit [Screen] keys for the app's navigation tree.
  *
- * Navigation tree:
+ * Navigation tree (Dashboard-hub model, no bottom bar):
  *
  *   LoadingScreen (root / entry point)
  *        |
- *        |-- success --> HomeScreen        (the menu / main container)
+ *        |-- success --> DashboardScreen  (the hub)
+ *        |                    |
+ *        |                    |-- CollectionsScreen --> CollectionArtifactsScreen(id) --> ArtifactDetailsScreen(id)
+ *        |                    |-- ShowcaseScreen ----------------------------------------> ArtifactDetailsScreen(id)
+ *        |                    |-- AddArtifactScreen (save -> pop)
+ *        |                    '-- recent item -------------------------------------------> ArtifactDetailsScreen(id)
  *        |
  *        '-- no network --> NoConnectionScreen
  *                                |
  *                                '-- retry --> back to LoadingScreen
+ *
+ * Only lightweight ids (`collectionId`, `artifactId`) cross the navigation
+ * boundary as `data class` keys; full models are fetched from
+ * [com.trid.test.kmpsample.data.CollectionsRepository] inside each presenter.
  *
  * In Kotlin Multiplatform the Circuit `Screen` type does not require
  * `Parcelable`/`@Parcelize` in commonMain — plain `data object`/`data class`
@@ -32,6 +41,26 @@ data object LoadingScreen : Screen
 @CommonParcelize
 data object NoConnectionScreen : Screen
 
-/** Main menu / home container placeholder. */
+/** Hub screen shown after loading: stats, recent items, and entry points. */
 @CommonParcelize
-data object HomeScreen : Screen
+data object DashboardScreen : Screen
+
+/** Grid/list of all collections. */
+@CommonParcelize
+data object CollectionsScreen : Screen
+
+/** Artifacts belonging to a single collection. */
+@CommonParcelize
+data class CollectionArtifactsScreen(val collectionId: String) : Screen
+
+/** Full detail of one artifact (view / favorite / delete). */
+@CommonParcelize
+data class ArtifactDetailsScreen(val artifactId: String) : Screen
+
+/** Form for adding a new artifact. */
+@CommonParcelize
+data object AddArtifactScreen : Screen
+
+/** Curated cross-collection showcase (favorites / highlights). */
+@CommonParcelize
+data object ShowcaseScreen : Screen

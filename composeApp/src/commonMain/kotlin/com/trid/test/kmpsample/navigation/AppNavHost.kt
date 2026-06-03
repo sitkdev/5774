@@ -48,9 +48,7 @@ fun AppNavHost() {
 
     CircuitCompositionLocals(circuit) {
         CompositionLocalProvider(LocalGuardedNavigator provides guardedNavigator) {
-            RootScaffold(
-                background = AppGradients.Primary
-            ){ paddingValues ->
+            RootScaffold(){ paddingValues ->
                 NavigableCircuitContent(
                     modifier = Modifier.padding(paddingValues),
                     navigator = guardedNavigator,

@@ -5,9 +5,9 @@
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Change this text about cam persmission</string>
+	<string>This app uses the camera to let you capture and save photos.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Change this text about lib permission</string>
+	<string>This app accesses your photo library so you can select images to use in the app.</string>
     <key>UILaunchScreen</key>
     <dict>
         <key>UIColorName</key>

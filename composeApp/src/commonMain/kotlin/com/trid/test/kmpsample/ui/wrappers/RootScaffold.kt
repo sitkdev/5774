@@ -18,13 +18,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import com.trid.test.kmpsample.ui.theme.AppGradients.AppBg
 
 @Composable
 fun RootScaffold(
     modifier: Modifier = Modifier,
     topBar: @Composable () -> Unit = {},
     bottomBar: @Composable () -> Unit = {},
-    background: Brush,
+    background: Brush = AppBg,
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val softwareKeyboard = LocalSoftwareKeyboardController.current
@@ -32,6 +33,7 @@ fun RootScaffold(
 
     Box(
         modifier = Modifier
+            .fillMaxSize()
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() },
@@ -40,7 +42,13 @@ fun RootScaffold(
                     focusManager.clearFocus()
                 }
             )
-            .fillMaxSize().background(background)) {
+
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(background)
+        )
         Scaffold(
             modifier = modifier.fillMaxSize().imePadding(),
             containerColor = Color.Transparent,

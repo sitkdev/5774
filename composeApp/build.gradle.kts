@@ -18,6 +18,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.kotlinSerialization)
     id("org.jetbrains.kotlin.plugin.parcelize")
     id("stringfog")
     id("sq.res-guard")
@@ -139,6 +140,8 @@ kotlin {
             implementation(libs.core.splashscreen)
 
             implementation(libs.koin.android)
+
+            implementation(libs.androidx.security.crypto)
 
             implementation(libs.ktor.client.okhttp)
         }

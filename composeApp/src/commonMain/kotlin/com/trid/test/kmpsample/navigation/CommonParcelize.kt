@@ -16,7 +16,7 @@ package com.trid.test.kmpsample.navigation
  * Usage:
  * ```kotlin
  * @CommonParcelize
- * data object HomeScreen : Screen
+ * data object DashboardScreen : Screen
  * ```
  */
 @OptIn(ExperimentalMultiplatform::class)

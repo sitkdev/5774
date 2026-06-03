@@ -5,6 +5,12 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import com.slack.circuit.foundation.Circuit
+import com.trid.test.kmpsample.ui.AddArtifactScreenUi
+import com.trid.test.kmpsample.ui.ArtifactDetailsScreenUi
+import com.trid.test.kmpsample.ui.CollectionArtifactsScreenUi
+import com.trid.test.kmpsample.ui.CollectionsScreenUi
+import com.trid.test.kmpsample.ui.DashboardScreenUi
+import com.trid.test.kmpsample.ui.ShowcaseScreenUi
 import com.trid.test.kmpsample.ui.LoadingScreen as LoadingScreenContent
 import com.trid.test.kmpsample.ui.NoConnectionScreen as NoConnectionScreenContent
 
@@ -37,12 +43,47 @@ fun buildAppCircuit(): Circuit =
         .addUi<NoConnectionScreen, NoConnectionUiState> { state, modifier ->
             NoConnectionUi(state, modifier)
         }
-        // --- Home (menu container placeholder) ---
-        .addPresenter<HomeScreen, HomeUiState> { _, navigator, _ ->
-            HomePresenter(navigator)
+        // --- Dashboard (hub) ---
+        .addPresenter<DashboardScreen, DashboardUiState> { _, navigator, _ ->
+            DashboardPresenter(navigator)
         }
-        .addUi<HomeScreen, HomeUiState> { _, modifier ->
-            HomeUi(modifier)
+        .addUi<DashboardScreen, DashboardUiState> { state, modifier ->
+            DashboardScreenUi(state, modifier)
+        }
+        // --- Collections ---
+        .addPresenter<CollectionsScreen, CollectionsUiState> { _, navigator, _ ->
+            CollectionsPresenter(navigator)
+        }
+        .addUi<CollectionsScreen, CollectionsUiState> { state, modifier ->
+            CollectionsScreenUi(state, modifier)
+        }
+        // --- Artifacts within a collection ---
+        .addPresenter<CollectionArtifactsScreen, CollectionArtifactsUiState> { screen, navigator, _ ->
+            CollectionArtifactsPresenter(screen.collectionId, navigator)
+        }
+        .addUi<CollectionArtifactsScreen, CollectionArtifactsUiState> { state, modifier ->
+            CollectionArtifactsScreenUi(state, modifier)
+        }
+        // --- Artifact details ---
+        .addPresenter<ArtifactDetailsScreen, ArtifactDetailsUiState> { screen, navigator, _ ->
+            ArtifactDetailsPresenter(screen.artifactId, navigator)
+        }
+        .addUi<ArtifactDetailsScreen, ArtifactDetailsUiState> { state, modifier ->
+            ArtifactDetailsScreenUi(state, modifier)
+        }
+        // --- Add artifact ---
+        .addPresenter<AddArtifactScreen, AddArtifactUiState> { _, navigator, _ ->
+            AddArtifactPresenter(navigator)
+        }
+        .addUi<AddArtifactScreen, AddArtifactUiState> { state, modifier ->
+            AddArtifactScreenUi(state, modifier)
+        }
+        // --- Showcase ---
+        .addPresenter<ShowcaseScreen, ShowcaseUiState> { _, navigator, _ ->
+            ShowcasePresenter(navigator)
+        }
+        .addUi<ShowcaseScreen, ShowcaseUiState> { state, modifier ->
+            ShowcaseScreenUi(state, modifier)
         }
         .build()
 
@@ -77,14 +118,4 @@ private fun NoConnectionUi(
     NoConnectionScreenContent(
         onReconnect = { /*state.eventSink(NoConnectionUiEvent.Retry)*/ },
     )
-}
-
-/**
- * Home UI wrapper — empty placeholder menu container. Back press is left to
- * the navigator (handled at the host level so spam back-press settles on Home
- * instead of closing the app).
- */
-@Composable
-private fun HomeUi(modifier: Modifier = Modifier) {
-    // Placeholder menu container. Child navigators will be nested here later.
 }

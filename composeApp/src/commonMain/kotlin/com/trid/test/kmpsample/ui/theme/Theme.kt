@@ -1,10 +1,6 @@
 package com.trid.test.kmpsample.ui.theme
 
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -80,6 +76,9 @@ object AppAccent {
  * coordinate handling), safe to hold as plain vals.
  */
 object AppGradients {
+    val AppBg: Brush = Brush.linearGradient(
+        colors = listOf(GradientCardStart, GradientPrimaryStart, GradientPrimaryEnd)
+    )
     val Primary: Brush = Brush.linearGradient(
         colors = listOf(GradientPrimaryStart, GradientPrimaryEnd)
     )
@@ -94,9 +93,12 @@ object AppGradients {
 }
 
 /**
- * Applies the app's dark Material 3 color scheme and typography. Wraps content
- * in a [Surface] that consumes the safe-drawing insets so children can lay out
- * within the safe area.
+ * Applies the app's dark Material 3 color scheme and typography. The wrapping
+ * [Surface] is intentionally **full-bleed** (no inset padding) so the app
+ * background extends edge-to-edge behind the system bars. Safe-area insets are
+ * applied to the *content* downstream by `RootScaffold`'s `contentWindowInsets`,
+ * not here — applying them in both places would double-pad and leave the
+ * status-bar strip unpainted.
  */
 @Composable
 fun AppTheme(content: @Composable () -> Unit) {
@@ -104,13 +106,6 @@ fun AppTheme(content: @Composable () -> Unit) {
         colorScheme = DarkColors,
         typography = appTypography(),
     ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-                .consumeWindowInsets(WindowInsets.safeDrawing),
-            color = MaterialTheme.colorScheme.background,
-            content = content,
-        )
+        content()
     }
 }

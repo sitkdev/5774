@@ -8,13 +8,29 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
+        android:name="com.trid.test.kmpsample.MainApplication"
         android:usesCleartextTraffic="true"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        android:theme="@style/Theme.AppTheme.Splash">
+
+        <!--
+            FileProvider used exclusively by rememberCameraPicker to expose a
+            temp capture file to the camera app via a content:// URI.
+            Authority must match FILE_PROVIDER_AUTHORITY_SUFFIX in MediaPicker.android.kt.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
@@ -29,7 +45,8 @@
             android:launchMode="singleTask"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize"
-            android:name="com.trid.test.kmpsample.MainActivity">
+            android:name="com.trid.test.kmpsample.MainActivity"
+            android:theme="@style/Theme.AppTheme.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

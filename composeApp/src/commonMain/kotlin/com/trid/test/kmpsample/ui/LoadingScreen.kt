@@ -155,18 +155,10 @@ fun LoadingScreen() {
     val papyrus = AppAccent.Papyrus
     val turquoise = AppAccent.Turquoise
 
-    val background = MaterialTheme.colorScheme.background
-    val surface = MaterialTheme.colorScheme.surface
-
-    // Stable vertical obsidian backdrop brush.
-    val backdrop = remember(background, surface) {
-        Brush.verticalGradient(listOf(surface, background, background))
-    }
 
     Box(
         modifier = Modifier
-            .fillMaxSize()
-            .background(backdrop),
+            .fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
         // Layer 2: animated decorative canvas (glow + godrays + bokeh).

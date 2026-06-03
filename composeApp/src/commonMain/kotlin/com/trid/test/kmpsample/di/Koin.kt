@@ -1,0 +1,47 @@
+package com.trid.test.kmpsample.di
+
+import com.trid.test.kmpsample.data.CollectionsRepository
+import com.trid.test.kmpsample.storage.StorageHelper
+import org.koin.core.context.startKoin
+import org.koin.core.module.Module
+import org.koin.dsl.KoinAppDeclaration
+import org.koin.dsl.module
+import org.koin.mp.KoinPlatform
+
+/**
+ * Provides the platform-specific [com.trid.test.kmpsample.storage.SettingsFactory]
+ * (Android: needs an `androidContext()`; iOS: NSUserDefaults / Keychain).
+ */
+expect fun platformStorageModule(): Module
+
+/**
+ * Shared DI graph. [StorageHelper] is a process singleton built from the
+ * platform-provided `SettingsFactory`.
+ */
+val storageModule: Module = module {
+    single { StorageHelper(get()) }
+}
+
+/**
+ * Data graph. [CollectionsRepository] is a process singleton built on top of
+ * [StorageHelper]; it owns the collections/artifacts state and seeds on first
+ * launch. Presenters obtain it via `KoinPlatform.getKoin().get<CollectionsRepository>()`.
+ */
+val dataModule: Module = module {
+    single { CollectionsRepository(get()) }
+}
+
+/**
+ * Starts Koin once per process. Safe to call from each platform entry point:
+ * the [KoinPlatform.getKoinOrNull] guard makes repeat calls (e.g. an iOS view
+ * controller being recreated) a no-op.
+ *
+ * @param appDeclaration platform hook — Android passes `androidContext(...)` here.
+ */
+fun initKoin(appDeclaration: KoinAppDeclaration = {}) {
+    if (KoinPlatform.getKoinOrNull() != null) return
+    startKoin {
+        appDeclaration()
+        modules(platformStorageModule(), storageModule, dataModule)
+    }
+}
