@@ -15,10 +15,18 @@ import platform.AVFoundation.authorizationStatusForMediaType
 import platform.AVFoundation.requestAccessForMediaType
 import platform.Foundation.NSData
 import platform.Foundation.NSError
+import platform.Foundation.NSSortDescriptor
 import platform.Photos.PHAccessLevelReadWrite
+import platform.Photos.PHAsset
+import platform.Photos.PHAssetMediaTypeImage
 import platform.Photos.PHAuthorizationStatusAuthorized
 import platform.Photos.PHAuthorizationStatusLimited
 import platform.Photos.PHAuthorizationStatusNotDetermined
+import platform.Photos.PHFetchOptions
+import platform.Photos.PHImageManager
+import platform.Photos.PHImageRequestOptions
+import platform.Photos.PHImageRequestOptionsDeliveryModeHighQualityFormat
+import platform.Photos.PHImageRequestOptionsVersionCurrent
 import platform.Photos.PHPhotoLibrary
 import platform.PhotosUI.PHPickerConfiguration
 import platform.PhotosUI.PHPickerFilter
@@ -42,6 +50,9 @@ import platform.posix.memcpy
 // Gallery picker — PHPickerViewController (no library permission on iOS 14+)
 // ---------------------------------------------------------------------------
 
+// Single-photo flow: users tap Gallery again to add more photos.
+private const val GALLERY_SELECTION_LIMIT = 1L
+
 @Composable
 actual fun rememberGalleryPicker(onResult: (ByteArray?) -> Unit): MediaPicker {
     val rootController = LocalUIViewController.current
@@ -63,11 +74,19 @@ actual fun rememberGalleryPicker(onResult: (ByteArray?) -> Unit): MediaPicker {
             }
 
             PHAuthorizationStatusNotDetermined -> {
-                PHPhotoLibrary.requestAuthorizationForAccessLevel(PHAccessLevelReadWrite) { _ ->
-                    // PHPickerViewController works for both Authorized and Limited;
-                    // present regardless so the system handles the selection scope.
+                PHPhotoLibrary.requestAuthorizationForAccessLevel(PHAccessLevelReadWrite) { newStatus ->
                     dispatch_async(dispatch_get_main_queue()) {
-                        presentGalleryPicker(rootController, delegate)
+                        when (newStatus) {
+                            PHAuthorizationStatusAuthorized ->
+                                presentGalleryPicker(rootController, delegate)
+
+                            // Limited: iOS уже показало multi-select-шторку и юзер выбрал
+                            // набор фоток — отдаём их пачкой в onResult, без второго пикера.
+                            PHAuthorizationStatusLimited ->
+                                loadAccessibleImageAssets(onResultState.value)
+
+                            else -> onResultState.value(null)
+                        }
                     }
                 }
             }
@@ -84,8 +103,10 @@ private fun presentGalleryPicker(
     rootController: UIViewController,
     delegate: GalleryDelegate,
 ) {
-    val config = PHPickerConfiguration(PHPhotoLibrary.sharedPhotoLibrary())
-    config.setSelectionLimit(1L)
+    // Parameterless config keeps PHPicker out-of-process so the iOS Limited
+    // Library multi-select overlay never appears; selectionLimit applies always.
+    val config = PHPickerConfiguration()
+    config.setSelectionLimit(GALLERY_SELECTION_LIMIT)
     config.setFilter(PHPickerFilter.imagesFilter)
     val picker = PHPickerViewController(config)
     picker.setDelegate(delegate)
@@ -102,17 +123,62 @@ private class GalleryDelegate(
         @Suppress("UNCHECKED_CAST")
         val results = didFinishPicking as List<PHPickerResult>
 
-        if (results.isEmpty()) {
+        // Single-photo flow: selectionLimit caps the picker UI at one item, and we
+        // deliberately process only that one item even if more were ever returned.
+        val single = results.firstOrNull()
+        if (single == null) {
             onResult(null)
             return
         }
 
-        results.first().itemProvider.loadDataRepresentationForTypeIdentifier(
+        single.itemProvider.loadDataRepresentationForTypeIdentifier(
             typeIdentifier = "public.image",
             completionHandler = { data: NSData?, _: NSError? ->
                 onResult(data?.toByteArray())
             },
         )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Limited Photo Library — load all photos the user granted access to.
+// Called after requestAuthorizationForAccessLevel returns Limited; onResult is
+// invoked once per loaded photo (UI accumulates them).
+// ---------------------------------------------------------------------------
+
+@OptIn(ExperimentalForeignApi::class)
+private fun loadAccessibleImageAssets(onResult: (ByteArray?) -> Unit) {
+    val options = PHFetchOptions().apply {
+        setSortDescriptors(
+            listOf(
+                NSSortDescriptor.sortDescriptorWithKey("creationDate", ascending = true),
+            ),
+        )
+    }
+    val fetchResult = PHAsset.fetchAssetsWithMediaType(PHAssetMediaTypeImage, options)
+    fetchResult.enumerateObjectsUsingBlock { asset, _, _ ->
+        (asset as? PHAsset)?.let { loadImageData(it, onResult) }
+    }
+}
+
+private fun loadImageData(asset: PHAsset, onResult: (ByteArray?) -> Unit) {
+    val opts = PHImageRequestOptions().apply {
+        setDeliveryMode(PHImageRequestOptionsDeliveryModeHighQualityFormat)
+        setVersion(PHImageRequestOptionsVersionCurrent)
+        setNetworkAccessAllowed(true) // iCloud photos load over network if needed.
+    }
+    PHImageManager.defaultManager().requestImageDataAndOrientationForAsset(
+        asset = asset,
+        options = opts,
+    ) { data: NSData?, _, _, _ ->
+        // Транскодим в JPEG через UIImage: нормализует HEIC/Live/edited под формат,
+        // который рендерер гарантированно осилит, и отфильтровывает битые/пустые байты
+        // (UIImage(data:) вернёт null → пробросим null дальше → UI пропустит).
+        val jpeg = data?.let { UIImage.imageWithData(it) }
+            ?.let { UIImageJPEGRepresentation(it, 0.9) }
+        dispatch_async(dispatch_get_main_queue()) {
+            onResult(jpeg?.toByteArray())
+        }
     }
 }
 
