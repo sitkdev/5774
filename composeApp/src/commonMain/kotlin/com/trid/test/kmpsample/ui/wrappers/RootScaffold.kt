@@ -6,8 +6,10 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -18,7 +20,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import com.trid.test.kmpsample.getPlatform
 import com.trid.test.kmpsample.ui.theme.AppGradients.AppBg
+
+
+internal val isIOS get() = getPlatform().name.startsWith("iOS")
 
 @Composable
 fun RootScaffold(
@@ -55,7 +61,13 @@ fun RootScaffold(
             contentColor = MaterialTheme.colorScheme.onBackground,
             topBar = topBar,
             bottomBar = bottomBar,
-            contentWindowInsets = WindowInsets.safeDrawing,
+            contentWindowInsets = if (isIOS) {
+                WindowInsets.safeDrawing.only(
+                    WindowInsetsSides.Top + WindowInsetsSides.Horizontal
+                )
+            } else {
+                WindowInsets.safeDrawing
+            },
             content = content,
         )
     }
