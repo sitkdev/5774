@@ -1,0 +1,169 @@
+workflows:
+  upload_ios_metadata:
+    name: Upload iOS metadata
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+
+    environment:
+      xcode: 16.2
+      groups:
+        - store_credentials
+      vars:
+        IOS_BUNDLE_ID: com.egcyptx.handler # <-- Put the value
+        APP_NAME: $APPSTORE_APP_NAME # <--
+
+    scripts:
+      - name: Print working dir & contents
+        script: |
+          echo "PWD: $(pwd)"
+          ls -R
+
+      - name: Install Ruby dependencies
+        script: |
+          bundle install || bundle install --path vendor/bundle
+          gem install fastlane-plugin-appicon || true
+
+      - name: Install Python dependency
+        script: |
+          python3 -m pip install --user requests
+
+      - name: Generate fastlane metadata from Google Sheet
+        script: |
+          cd "$CM_BUILD_DIR"
+          python3 fastlane/import_fastlane_metadata_from_gsheet.py
+
+      - name: Validate metadata directory structure
+        script: |
+          echo "===== Validating Metadata ====="
+          # Check that metadata folder exists
+          if [ ! -d "./fastlane/metadata" ]; then
+            echo "ERROR: Metadata directory not found at ./fastlane/metadata"
+            exit 1
+          fi
+          
+          # Check that en-US folder exists (primary required locale)
+          if [ ! -d "./fastlane/metadata/en-US" ]; then
+            echo "ERROR: No en-US metadata folder found in ./fastlane/metadata"
+            exit 1
+          fi
+          
+          # List and count all locale folders
+          echo "Scanning metadata locales..."
+          find ./fastlane/metadata -maxdepth 1 -type d | grep -v "^./fastlane/metadata$" | grep -v "review_information" | sort | while read LOCALE_DIR; do
+            LOCALE=$(basename "$LOCALE_DIR")
+            echo "Processing metadata locale: $LOCALE"
+            
+            # Check for required metadata files in each locale
+            REQUIRED_FILES=("name.txt" "description.txt" "keywords.txt")
+            MISSING=0
+            for FILE in "${REQUIRED_FILES[@]}"; do
+              if [ ! -f "$LOCALE_DIR/$FILE" ]; then
+                echo "  - WARNING: $FILE is missing in $LOCALE"
+                MISSING=$((MISSING+1))
+              fi
+            done
+            
+            if [ $MISSING -eq 0 ]; then
+              echo "  - All required files present in $LOCALE"
+            else
+              echo "  - $MISSING required files missing in $LOCALE"
+            fi
+          done
+          
+          # Verify required files exist in en-US (this is a must)
+          REQUIRED_FILES=("name.txt" "description.txt" "keywords.txt" "privacy_url.txt" "support_url.txt")
+          for FILE in "${REQUIRED_FILES[@]}"; do
+            if [ ! -f "./fastlane/metadata/en-US/$FILE" ]; then
+              echo "ERROR: Required metadata file ./fastlane/metadata/en-US/$FILE is missing"
+              exit 1
+            fi
+          done
+          
+          # Count language folders
+          LANGUAGE_FOLDERS=$(find ./fastlane/metadata -maxdepth 1 -type d | grep -v "^./fastlane/metadata$" | grep -v "review_information" | wc -l)
+          echo "Found $LANGUAGE_FOLDERS language folders in metadata"
+          
+          # Check for review_information
+          if [ -d "./fastlane/metadata/review_information" ]; then
+            echo "Review information folder found"
+            REVIEW_FILES=$(find "./fastlane/metadata/review_information" -type f | wc -l)
+            echo "Found $REVIEW_FILES files in review_information"
+          else
+            echo "WARNING: No review_information folder found - this might be needed for new app submissions"
+          fi
+          
+          echo "Metadata validation successful!"
+
+      - name: Upload metadata via fastlane deliver
+        script: |
+          bundle exec fastlane ios upload_metadata
+
+    artifacts:
+      - fastlane/logs/**/*
+
+
+  ios-workflow:
+    name: iOS Workflow
+    max_build_duration: 120
+
+    integrations:
+      app_store_connect: nilexis #<App Store Connect API key name>  
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - store_credentials
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: $IOS_BUNDLE_ID # <--
+      vars:
+        # XCODE_PROJECT: "ios/Runner.xcodeproj"
+        # XCODE_SCHEME: "Runner"
+        BUNDLE_ID: "$IOS_BUNDLE_ID" 
+        APP_STORE_APPLE_ID: $APPSTORE_APP_ID # <--
+      flutter: 3.41.1
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Set up provisioning profiles settings on Xcode project
+        script: xcode-project use-profiles --verbose
+      - name: Clean Flutter project
+        script: |
+          set -e
+          flutter clean
+      - name: Get Flutter packages
+        script: |
+          set -e
+          flutter pub get
+      - name: Install pods
+        script: |
+          set -e
+          find . -name "Podfile" -execdir pod install \;
+
+      # - name: Build signed IPA
+      #   script: |
+      #     xcode-project build-ipa \
+      #       --project "$XCODE_PROJECT" \
+      #       --scheme "$XCODE_SCHEME" 
+      - name: Flutter build ipa
+        script: |
+          set -e
+          flutter build ipa --release \
+            --build-name=1.0 \
+            --build-number=1 \
+            --export-options-plist=ios/export_options.plist
+    artifacts:
+        - build/ios/ipa/*.ipa
+        - /tmp/xcodebuild_logs/*.log
+        - flutter_drive.log
+        - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+        - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        api_key: $APPSTORE_P8 # <--
+        key_id: $APPSTORE_KEY_ID # <--
+        issuer_id: $APPSTORE_ISSUER_ID # <--
+        submit_to_testflight: true
+
+        # Configuration related to App Store (optional)
+        # Note: This action is performed during post-processing.
+        submit_to_app_store: false
