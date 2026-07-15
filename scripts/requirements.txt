@@ -4,3 +4,4 @@ google-auth>=2.23
 pillow>=10.0
 claude-agent-sdk>=0.0.1
 anyio>=4.0
+phonenumbers>=8.13

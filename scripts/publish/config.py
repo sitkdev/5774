@@ -1,4 +1,7 @@
+import base64
 import json
+import os
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -22,12 +25,16 @@ def _load_properties(path: Path) -> dict:
     return out
 
 
-REQUIRED_KEYS = {
-    "jira.baseUrl": "jira_base_url",
-    "jira.browseBaseUrl": "jira_browse_base_url",
-    "jira.email": "jira_email",
-    "jira.apiToken": "jira_api_token",
-    "google.sheets.credentialsPath": "sheets_credentials_path",
+# Each config field can be supplied two ways. Env vars win; the
+# Utils/local.properties file is the fallback. This lets the same flow run
+# unattended in CI (env only — there is no sibling Utils/ checkout there) and
+# interactively on a developer machine (file only).
+#   field                -> (env var,                local.properties key)
+FIELD_SOURCES = {
+    "jira_base_url":        ("JIRA_BASE_URL",        "jira.baseUrl"),
+    "jira_browse_base_url": ("JIRA_BROWSE_BASE_URL", "jira.browseBaseUrl"),
+    "jira_email":           ("JIRA_EMAIL",           "jira.email"),
+    "jira_api_token":       ("JIRA_API_TOKEN",       "jira.apiToken"),
 }
 
 
@@ -42,14 +49,82 @@ class GlobalConfig:
     @staticmethod
     def load() -> "GlobalConfig":
         props = _load_properties(UTILS_LOCAL_PROPS)
-        missing = [k for k in REQUIRED_KEYS if not props.get(k)]
+
+        def resolve(env_key: str, prop_key: str) -> str:
+            val = os.environ.get(env_key)
+            if val:
+                return val.strip()
+            return (props.get(prop_key) or "").strip()
+
+        values = {
+            field: resolve(env_key, prop_key)
+            for field, (env_key, prop_key) in FIELD_SOURCES.items()
+        }
+
+        # Browse URL defaults to the API base URL — same host on Atlassian
+        # Cloud, so CI only needs to provide JIRA_BASE_URL.
+        if not values["jira_browse_base_url"]:
+            values["jira_browse_base_url"] = values["jira_base_url"]
+
+        values["sheets_credentials_path"] = _resolve_sheets_credentials(props)
+
+        missing = [f for f, v in values.items() if not v]
         if missing:
             raise SystemExit(
-                f"Missing keys in {UTILS_LOCAL_PROPS}:\n  "
-                + "\n  ".join(missing)
-                + "\n\nAdd them and re-run."
+                "Missing required config (set via env var, or in "
+                f"{UTILS_LOCAL_PROPS}):\n  "
+                + "\n  ".join(_describe_missing(m) for m in missing)
+                + "\n\nProvide them and re-run."
             )
-        return GlobalConfig(**{v: props[k] for k, v in REQUIRED_KEYS.items()})
+        return GlobalConfig(**values)
+
+
+def _resolve_sheets_credentials(props: dict) -> str:
+    """Resolve the Google service-account JSON to a file path.
+
+    Precedence:
+      1. GOOGLE_SHEETS_CREDENTIALS_PATH        — path to an existing json file
+      2. GOOGLE_SHEETS_CREDENTIALS_JSON_BASE64 — base64 of the json, decoded to
+         a temp file (used in CI, where the SA key is a masked CI/CD variable)
+      3. google.sheets.credentialsPath in local.properties (local dev)
+    """
+    path = os.environ.get("GOOGLE_SHEETS_CREDENTIALS_PATH")
+    if path:
+        return path.strip()
+
+    b64 = os.environ.get("GOOGLE_SHEETS_CREDENTIALS_JSON_BASE64")
+    if b64:
+        try:
+            raw = base64.b64decode(b64.strip(), validate=True)
+        except Exception as e:
+            raise SystemExit(
+                f"GOOGLE_SHEETS_CREDENTIALS_JSON_BASE64 is not valid base64: {e}"
+            )
+        # Fail fast with a clear message rather than deep inside gspread.
+        try:
+            json.loads(raw.decode("utf-8"))
+        except Exception as e:
+            raise SystemExit(
+                "GOOGLE_SHEETS_CREDENTIALS_JSON_BASE64 did not decode to valid "
+                f"JSON: {e}"
+            )
+        fd, tmp = tempfile.mkstemp(prefix="gsheets-sa-", suffix=".json")
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(raw)
+        return tmp
+
+    return (props.get("google.sheets.credentialsPath") or "").strip()
+
+
+def _describe_missing(field: str) -> str:
+    if field == "sheets_credentials_path":
+        return (
+            "sheets_credentials_path (env GOOGLE_SHEETS_CREDENTIALS_PATH or "
+            "GOOGLE_SHEETS_CREDENTIALS_JSON_BASE64, or "
+            "google.sheets.credentialsPath)"
+        )
+    env_key, prop_key = FIELD_SOURCES[field]
+    return f"{field} (env {env_key} or {prop_key})"
 
 
 class Cache:

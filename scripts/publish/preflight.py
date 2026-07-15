@@ -56,9 +56,20 @@ def run(
 
 
 def _download_p8(jc: jira.JiraClient, ticket: jira.AppTicket) -> str:
-    p8s = [a for a in ticket.attachments if a.get("filename", "").lower().endswith(".p8")]
+    def _p8s(attachments):
+        return [a for a in attachments or [] if a.get("filename", "").lower().endswith(".p8")]
+
+    src = ticket.key
+    p8s = _p8s(ticket.attachments)
+    if not p8s and ticket.parent_key:
+        print(f"  No .p8 on {ticket.key}; checking parent {ticket.parent_key}...")
+        p8s = _p8s(jc._get_attachments(ticket.parent_key))
+        if p8s:
+            src = ticket.parent_key
     if not p8s:
-        utils.die("No .p8 attachment on the Jira ticket")
+        utils.die(f"No .p8 attachment on {ticket.key} or its parent")
+    if src != ticket.key:
+        print(f"  Using .p8 from parent {src}")
     expected = [f"{ticket.key_id}.p8", f"AuthKey_{ticket.key_id}.p8"]
     match = next((a for a in p8s if a.get("filename") in expected), None)
     if not match:
@@ -90,17 +101,22 @@ def _codemagic(cache: Cache, ticket_number: str, ticket: jira.AppTicket):
         print("  Using Codemagic API token from Jira ticket")
     cache.set("codemagic.apiToken", token)
     cm = codemagic.CodemagicClient(token)
-    candidates = [ticket_number]
-    try:
-        candidates.append(str(int(ticket_number) - 1))
-    except ValueError:
-        pass
-    app = cm.find_app_by_names(candidates)
-    if not app:
-        name = utils.prompt("Codemagic app name (manual)")
-        app = cm.find_app_by_names([name])
+    apps = cm.list_apps()
+    if len(apps) == 1:
+        app = apps[0]
+        print(f"  Only one Codemagic app on this account; using it (skipping name search)")
+    else:
+        candidates = [ticket_number]
+        try:
+            candidates.append(str(int(ticket_number) - 1))
+        except ValueError:
+            pass
+        app = cm.find_app_by_names(candidates, apps=apps)
         if not app:
-            utils.die(f"Codemagic app '{name}' not found")
+            name = utils.prompt("Codemagic app name (manual)")
+            app = cm.find_app_by_names([name])
+            if not app:
+                utils.die(f"Codemagic app '{name}' not found")
     print(f"  ✓ app: {app.get('appName')} (id={app.get('_id')})")
     return cm, app
 

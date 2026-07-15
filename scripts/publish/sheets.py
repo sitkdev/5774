@@ -36,7 +36,7 @@ class SheetsClient:
         support_url: str,
     ):
         ws = self.sh.worksheet(tab)
-        # Row 1 = headers; row 2 = en-US (auto-translated into rows 3-37).
+        # Row 1 = headers; row 2 = en-GB metadata.
         # Columns: A=locale B=name C=subtitle D=description E=keywords
         #          F=release_notes (skip) G=promotional_text (skip)
         #          H=privacy_url I=support_url

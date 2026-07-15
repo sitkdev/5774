@@ -33,9 +33,16 @@ def check_screenshots(jc=None, ticket=None) -> list:
             input()
             continue
         if len(images) > MAX_IMAGES:
-            raise SystemExit(
-                f"Too many images ({len(images)}) in {WHITE_DIR}; max is {MAX_IMAGES}"
+            extra = images[MAX_IMAGES:]
+            print(
+                f"  [warn] {len(images)} images in {WHITE_DIR}; App Store accepts "
+                f"at most {MAX_IMAGES}. Keeping the first {MAX_IMAGES}, removing "
+                f"{len(extra)}:"
             )
+            for f in extra:
+                print(f"      - removing {f.name}")
+                f.unlink()
+            images = images[:MAX_IMAGES]
         print(f"Found {len(images)} image(s) in {WHITE_DIR}:")
         for img in images:
             print(f"  - {img.name}")
@@ -44,15 +51,19 @@ def check_screenshots(jc=None, ticket=None) -> list:
 
 def _try_fetch_from_jira(jc, ticket) -> bool:
     parent_key = getattr(ticket, "parent_key", "") or ""
-    if not parent_key:
-        print(f"  [warn] {ticket.key} has no parent ticket — skipping auto-fetch.")
-        return False
-    print(f"  Looking for design zip via parent {parent_key}...")
-    result = jc.fetch_design_zip(parent_key)
+    result = None
+    if parent_key:
+        print(f"  Looking for design zip via parent {parent_key}...")
+        result = jc.fetch_design_zip(parent_key)
+    else:
+        print(f"  [warn] {ticket.key} has no parent ticket — skipping design-zip lookup.")
+    if not result:
+        print(f"  Looking for an iOS screenshots zip on {ticket.key} or its parent...")
+        result = jc.fetch_screenshot_zip(ticket)
     if not result:
         return False
-    des_key, zip_bytes, filename = result
-    print(f"  ✓ Got {filename} ({len(zip_bytes)} bytes) from {des_key}")
+    src_key, zip_bytes, filename = result
+    print(f"  ✓ Got {filename} ({len(zip_bytes)} bytes) from {src_key}")
     try:
         written = _extract_images(zip_bytes, WHITE_DIR)
     except Exception as e:

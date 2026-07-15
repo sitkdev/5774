@@ -1,4 +1,6 @@
+import os
 import re
+import secrets
 import subprocess
 import sys
 from pathlib import Path
@@ -6,7 +8,6 @@ from typing import Optional
 
 from . import (
     assets,
-    babysit,
     config,
     github_remote,
     jira,
@@ -22,6 +23,7 @@ from .constants import (
     METADATA_WORKFLOW_ID,
     RELEASE_BRANCH,
     RELEASE_WORKFLOW_ID,
+    SUBMIT_WORKFLOW_ID,
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -66,15 +68,25 @@ def print_jira_block(ticket: jira.AppTicket, story: jira.IfStory):
     print(f"  Key ID:              {ticket.key_id}")
     print(f"  Issuer ID:           {ticket.issuer_id}")
     print(f"  Privacy Policy:      {ticket.privacy_policy}")
+    print(f"  Klo link (webhook):  {ticket.domain or '(none — webhook skipped)'}")
     print(f"  Octo Profile:        {ticket.octo_profile}")
     print(f"  Linked IF story:     {story.key}")
     print(f"  IF Email:            {story.email}")
     print(f"  IF Phone:            {story.phone}")
+    print(f"  IF 2FA Number:       {story.twofa_number or '(none — 2FA will fail!)'}")
+    print(f"  IF 2FA Link:         {'set' if story.twofa_link else '(none — 2FA will fail!)'}")
     print(f"  Attachments:         {[a.get('filename') for a in ticket.attachments]}")
     print("-" * 72)
 
 
 def _pick_if_key(ticket: jira.AppTicket, jc: jira.JiraClient) -> str:
+    """Resolve the IF account story, in order:
+      1. 'related account' link on the child (IOS) ticket
+      2. 'related account' link on the parent (Main) ticket
+      3. Octo Profile search using the child's value
+      4. Octo Profile search using the parent's value
+    """
+    # 1. child 'related account' link
     if ticket.if_keys_related:
         if len(ticket.if_keys_related) > 1:
             print(
@@ -82,34 +94,42 @@ def _pick_if_key(ticket: jira.AppTicket, jc: jira.JiraClient) -> str:
                 f"{ticket.if_keys_related} — using first."
             )
         return ticket.if_keys_related[0]
-    others = ticket.if_keys_other
-    if not others:
-        if ticket.octo_profile:
+
+    # 2. parent 'related account' link
+    if ticket.parent_if_keys_related:
+        if len(ticket.parent_if_keys_related) > 1:
             print(
-                f"  No linked IF story on {ticket.key}; "
-                f"trying 'Octo Profile' fallback: {ticket.octo_profile!r}"
+                f"  Multiple 'related account' IF links on parent {ticket.parent_key}: "
+                f"{ticket.parent_if_keys_related} — using first."
             )
-            found = jc.find_if_story_by_octo_profile(ticket.octo_profile)
-            if found:
-                print(f"  ✓ Resolved IF story via Octo Profile: {found}")
-                return found
-        utils.die(
-            f"No linked IF story on {ticket.key} and no match for "
-            f"'Octo Profile' ({ticket.octo_profile!r}) in '{jira.IF_PROJECT_NAME}'. "
-            f"Link a story (via 'related account' or any link type) "
-            f"or fix the Octo Profile value and re-run."
-        )
-    if len(others) == 1:
         print(
-            f"  No 'related account' link on {ticket.key}; "
-            f"using single linked IF story: {others[0]}"
+            f"  No 'related account' link on {ticket.key}; using parent "
+            f"{ticket.parent_key}'s link: {ticket.parent_if_keys_related[0]}"
         )
-        return others[0]
-    print(f"  No 'related account' link on {ticket.key}; multiple linked IF stories:")
-    for i, k in enumerate(others):
-        print(f"    [{i}] {k}")
-    idx = int(utils.prompt("Select index", "0"))
-    return others[idx]
+        return ticket.parent_if_keys_related[0]
+
+    # 3. child Octo Profile search
+    if ticket.octo_profile:
+        print(f"  No linked IF story; trying child Octo Profile: {ticket.octo_profile!r}")
+        found = jc.find_if_story_by_octo_profile(ticket.octo_profile)
+        if found:
+            print(f"  ✓ Resolved IF story via child Octo Profile: {found}")
+            return found
+
+    # 4. parent Octo Profile search
+    if ticket.parent_octo_profile:
+        print(f"  Trying parent Octo Profile: {ticket.parent_octo_profile!r}")
+        found = jc.find_if_story_by_octo_profile(ticket.parent_octo_profile)
+        if found:
+            print(f"  ✓ Resolved IF story via parent Octo Profile: {found}")
+            return found
+
+    utils.die(
+        f"No IF story for {ticket.key}: no 'related account' link on the ticket or its "
+        f"parent ({ticket.parent_key or 'none'}), and no Octo Profile match "
+        f"(child {ticket.octo_profile!r}, parent {ticket.parent_octo_profile!r}) in "
+        f"'{jira.IF_PROJECT_NAME}'. Add a 'related account' link or fix the Octo Profile."
+    )
 
 
 def _split_name(full: str) -> tuple:
@@ -165,20 +185,69 @@ def _set_cm_variables(
         ("APP_STORE_CONNECT_ISSUER_ID", ticket.issuer_id, False),
         ("APP_IDENTIFIER", ticket.bundle, False),
         ("APPLE_ID", story.email, False),
+        # Web-session auth for the `web_session_declarations` lane (App Privacy +
+        # DSA have no .p8 API — see Fastfile). spaceship logs in with these and
+        # auto-handles SMS 2FA via the gateway below. Creds from the IF account story.
+        ("FASTLANE_USER", story.email, False),
+        ("FASTLANE_PASSWORD", story.password, True),
     ]
     for key, value, secure in vars_:
         cm.upsert_variable(app_id, key, value, group, secure)
         print(f"  ✓ {key}" + (" (secret)" if secure else ""))
 
+    # Apple SMS 2FA — both come straight from the IF story with NO fallback: an
+    # empty value fails the web_session_declarations lane loudly rather than
+    # mis-targeting another account's number/inbox.
+    #   "2FA Number" → the trusted phone spaceship forces the SMS to (must be exact)
+    #   "2fa Link"   → the gateway the Fastfile polls for the code
+    if story.twofa_number:
+        cm.upsert_variable(app_id, "SPACESHIP_2FA_SMS_DEFAULT_PHONE_NUMBER", story.twofa_number, group, False)
+        print(f"  ✓ SPACESHIP_2FA_SMS_DEFAULT_PHONE_NUMBER = {story.twofa_number!r}")
+    else:
+        print("  • No '2fa Number' on the IF story — 2FA will fail until it's filled.")
+    if story.twofa_link:
+        cm.upsert_variable(app_id, "SMS_2FA_GATEWAY_URL", story.twofa_link, group, True)
+        print("  ✓ SMS_2FA_GATEWAY_URL (secret, from IF '2fa Link')")
+    else:
+        print("  • No '2fa Link' on the IF story — 2FA will fail until it's filled.")
+
+    # App Store Connect status webhook. The `set_app_compliance` lane reads
+    # ASC_WEBHOOK_URL and, when present, registers a per-app webhook that pushes
+    # review-status (and other) events to our backend instead of us watching by
+    # hand. URL = "https://api." + <bare domain from the "Klo link" field> +
+    # "/<random>". The backend validates by payload shape, so the random suffix
+    # and the signing secret are free-form. No "Klo link" on the ticket → no URL
+    # → the lane skips webhook creation.
+    if ticket.domain:
+        host = re.sub(r"^https?://", "", ticket.domain.strip()).strip("/").lstrip(".")
+        webhook_url = f"https://api.{host}/{secrets.token_urlsafe(16)}"
+        cm.upsert_variable(app_id, "ASC_WEBHOOK_URL", webhook_url, group, False)
+        cm.upsert_variable(app_id, "ASC_WEBHOOK_SECRET", secrets.token_hex(32), group, True)
+        print(f"  ✓ ASC_WEBHOOK_URL = {webhook_url!r}")
+        print("  ✓ ASC_WEBHOOK_SECRET (secret)")
+    else:
+        print("  • No 'Klo link' on ticket — skipping ASC webhook env vars")
+
 
 MANUAL_STEPS = """
-14. Set price to $0 (Free) and availability to all territories
-    (+ "Make available in new territories") on App Store Connect.
+The App Store Connect steps are fully automated on Codemagic via
+fastlane/spaceship (the orchestrator never touches Apple directly):
+  * primary locale (en-GB) + removal of all other locales, content rights, Free
+    pricing, all-territory availability (+ new), and a status webhook (when the
+    ticket has a 'Klo link') — the '%s' workflow runs the `set_app_compliance`
+    lane (.p8 API) after the metadata upload
+  * App Privacy ('Data Not Collected', published), DSA trader status ('not a
+    trader', account-level), and the regulated-medical-device form ('No',
+    whenever the question applies) — the same workflow runs the
+    `web_session_declarations` lane over a web session with automated SMS 2FA,
+    since Apple exposes none of these via the .p8 API
+  * build attach + submit for review (3-step) — the '%s' workflow runs the
+    `submit_for_review` lane (it waits for Apple to finish processing the build)
+  * auto-release after approval — already enabled in fastlane `deliver`
 
-15. Submit app to review on App Store Connect.
-    (copyright, age rating, categories, and auto-release are already
-    configured by this script.)
-"""
+Remaining: watch the '%s' build. App Review status is pushed to the backend via
+the ASC webhook (when the ticket has a 'Klo link'); otherwise watch it in ASC.
+""" % (METADATA_WORKFLOW_ID, SUBMIT_WORKFLOW_ID, SUBMIT_WORKFLOW_ID)
 
 
 def _set_cm_metadata_vars(
@@ -206,10 +275,21 @@ def run():
 
     # ── Step 0: gather ────────────────────────────────────────────
     utils.section("STEP 0: Gather Jira data")
-    ticket_number = infer_ticket_number()
-    print(f"Ticket number: {ticket_number}")
     jc = jira.JiraClient(cfg)
-    ticket = jc.find_ticket_by_number(ticket_number)
+    # ticket_number is the app/repo code (e.g. "5730") — the Codemagic env group
+    # and Google Sheet tab name — and always comes from the repo/dir name.
+    # JIRA_ISSUE_KEY (from the Jira Automation -> middleware) only changes WHICH
+    # issue we read fields from: the iOS ticket's summary is NOT the repo code
+    # (here KA-684 summary "5731" vs repo "5730"), so we fetch it directly by key
+    # rather than searching by number. Number-inference fetch remains for local runs.
+    ticket_number = infer_ticket_number()
+    issue_key = os.environ.get("JIRA_ISSUE_KEY", "").strip()
+    if issue_key:
+        print(f"Using Jira issue from trigger: {issue_key} (app code {ticket_number})")
+        ticket = jc.find_ticket_by_key(issue_key)
+    else:
+        print(f"Ticket number: {ticket_number}")
+        ticket = jc.find_ticket_by_number(ticket_number)
     if_key = _pick_if_key(ticket, jc)
     story = jc.get_if_story(if_key)
     print_jira_block(ticket, story)
@@ -227,6 +307,7 @@ def run():
     utils.section("STEPS 1-4, 6: Edit project files")
     project_edits.set_bundle_and_team(ticket.bundle, ticket.team_id)
     print(f"  ✓ bundle={ticket.bundle}, team={ticket.team_id}")
+    project_edits.set_info_plist_encryption()
     project_edits.set_codemagic_group(ticket_number)
     print(f"  ✓ codemagic.yaml group → {ticket_number}")
     first, last = _split_name(ticket.appstore_account_name)
@@ -267,20 +348,17 @@ def run():
 
     # ── Step 12: Sheets metadata ─────────────────────────────────
     utils.section("STEP 12: Sheets + Telegraph metadata")
-    print("  Generating App Store metadata with Claude Agent SDK...")
+    print("  Generating App Store metadata + categories with Claude Agent SDK...")
     meta = metadata_gen.generate(ticket.app_name_ios)
     print(f"    subtitle:    {meta.get('subtitle')}")
     desc_preview = (meta.get("description") or "")[:120].replace("\n", " ")
     print(f"    description: {desc_preview}...")
     print(f"    keywords:    {meta.get('keywords')}")
-
-    print("  Determining App Store categories with Claude Agent SDK...")
-    cats = metadata_gen.determine_categories(ticket.app_name_ios)
-    print(f"    primary:     {cats['primary']}")
-    print(f"    secondary:   {cats['secondary'] or '(none)'}")
+    print(f"    primary:     {meta['primary']}")
+    print(f"    secondary:   {meta['secondary'] or '(none)'}")
     summary["categories"] = (
-        f"{cats['primary']}"
-        + (f" / {cats['secondary']}" if cats['secondary'] else "")
+        f"{meta['primary']}"
+        + (f" / {meta['secondary']}" if meta['secondary'] else "")
     )
 
     print("  Setting Codemagic metadata env vars (copyright, categories)...")
@@ -289,13 +367,13 @@ def run():
         pre.cm_app_id,
         ticket_number,
         copyright_value=ticket.appstore_account_name,
-        primary_category=cats["primary"],
-        secondary_category=cats["secondary"],
+        primary_category=meta["primary"],
+        secondary_category=meta["secondary"],
     )
 
     new_ws = pre.sheets_client.duplicate_template(ticket_number)
     summary["sheet_tab"] = _sheet_tab_url(new_ws.id)
-    print(f"  ✓ Duplicated 'Template 2' → '{ticket_number}'")
+    print(f"  ✓ Duplicated 'Template 3' → '{ticket_number}'")
 
     tg_token = cache.get("telegraph.accessToken")
     if not tg_token:
@@ -323,7 +401,7 @@ def run():
         support_url=support_url,
     )
 
-    # Validate + fix per-locale metadata against App Store character limits
+    # Validate + fix en-GB metadata against App Store character limits
     metadata_check.check_and_fix(
         pre.sheets_client.sh.worksheet(ticket_number),
         en_row={
@@ -336,22 +414,33 @@ def run():
 
     # ── Step 13: metadata workflow ───────────────────────────────
     utils.section("STEP 13: Trigger metadata workflow")
-    metadata_build_id = None
     if utils.confirm(f"Trigger Codemagic '{METADATA_WORKFLOW_ID}' build?", default=True):
         metadata_build_id = pre.cm.trigger_build(pre.cm_app_id, METADATA_WORKFLOW_ID, RELEASE_BRANCH)
         url = _cm_build_url(pre.cm_app_id, metadata_build_id)
         print(f"  ✓ Triggered: {url}")
         summary["metadata_build"] = url
 
+    # ── Step 14: submit-for-review workflow ──────────────────────
+    # Declarations (content rights / price / availability / App Privacy) run
+    # on Codemagic in the metadata workflow's `set_app_compliance` lane. This
+    # final workflow waits for Apple build-processing (10-60 min) off the
+    # orchestrator, attaches the build, and runs the 3-step submission.
+    utils.section("STEP 14: Trigger submit-for-review workflow")
+    if utils.confirm(
+        f"Trigger Codemagic '{SUBMIT_WORKFLOW_ID}' (waits for build, then submits to review)?",
+        default=True,
+    ):
+        submit_build_id = pre.cm.trigger_build(pre.cm_app_id, SUBMIT_WORKFLOW_ID, RELEASE_BRANCH)
+        url = _cm_build_url(pre.cm_app_id, submit_build_id)
+        print(f"  ✓ Triggered: {url}")
+        summary["submit_build"] = url
+
     # ── Manual checklist ─────────────────────────────────────────
-    utils.section("MANUAL STEPS REMAINING")
+    utils.section("WHAT'S LEFT")
     print(MANUAL_STEPS)
 
     _print_summary(summary)
     _logout_github(cache)
-
-    if metadata_build_id:
-        babysit.run(pre.cm, pre.cm_app_id, metadata_build_id)
 
 
 def _logout_github(cache: config.Cache):
@@ -390,6 +479,7 @@ def _print_summary(summary: dict):
     row("Codemagic app:", summary.get("codemagic_app"))
     row("  iOS release build:", summary.get("release_build"))
     row("  iOS metadata build:", summary.get("metadata_build"))
+    row("  iOS submit build:", summary.get("submit_build"))
     row("Sheet tab:", summary.get("sheet_tab"))
     row("Telegraph support:", summary.get("telegraph"))
     row("Category:", summary.get("categories"))

@@ -2,13 +2,12 @@
 
 # ── Google Sheets ────────────────────────────────────────────────────
 GSHEET_ID = "1bLUv9ONi7KrAOpbWur7U8KcrbydPXs3zxZkz-B_4CzE"
-SHEET_TEMPLATE_TAB = "Template 2"
+SHEET_TEMPLATE_TAB = "Template 3"
 
-# Rows 2-37 are locales (row 2 = en-US). Columns:
+# Row 2 holds the en-GB metadata. Columns:
 # A=locale B=name C=subtitle D=description E=keywords
 # F=release_notes (unused) G=promotional_text (unused) H=privacy_url I=support_url
 SHEET_LOCALE_ROW_FIRST = 2
-SHEET_LOCALE_ROW_LAST = 37
 SHEET_FIELD_COLUMNS = {"name": 2, "subtitle": 3, "description": 4, "keywords": 5}
 
 # ── Jira ─────────────────────────────────────────────────────────────
@@ -27,6 +26,7 @@ COMMIT_MESSAGE = "Release"
 # ── Codemagic ────────────────────────────────────────────────────────
 RELEASE_WORKFLOW_ID = "ios_kmp_release"
 METADATA_WORKFLOW_ID = "upload_ios_metadata"
+SUBMIT_WORKFLOW_ID = "submit_ios_for_review"
 
 # ── App Store per-locale character limits ────────────────────────────
 APPSTORE_LIMITS = {
@@ -35,10 +35,3 @@ APPSTORE_LIMITS = {
     "keywords": 100,
     "description": 4000,
 }
-
-# Metadata-fix rule: if <=N locales are oversized for a field, patch those locales
-# individually; if more, shorten the English copy and let re-translation happen.
-LOCALE_FIX_THRESHOLD = 3
-
-# Max iterations of the check-and-fix loop (shortening English, re-waiting).
-METADATA_FIX_MAX_ITERATIONS = 3
