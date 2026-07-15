@@ -1,0 +1,691 @@
+default_platform(:ios)
+
+require "net/http"
+require "uri"
+require "json"
+
+# ─────────────────────────────────────────────────────────────────────────
+# Helpers shared by the lanes below. Everything that talks to App Store
+# Connect goes through spaceship (fastlane's own client) so all Apple traffic
+# originates from the Codemagic runner with fastlane's expected request shape —
+# we never hit Apple from the orchestrator / a developer machine.
+# ─────────────────────────────────────────────────────────────────────────
+
+# Authenticate spaceship's global ConnectAPI client with the App Store Connect
+# API key (the same .p8 / Key ID / Issuer ID the uploads already use).
+def asc_login!
+  Spaceship::ConnectAPI.auth(
+    key_id: ENV.fetch("APP_STORE_CONNECT_KEY_IDENTIFIER"),
+    issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
+    key: ENV.fetch("APP_STORE_CONNECT_PRIVATE_KEY")
+  )
+end
+
+def asc_app_id!
+  ENV.fetch("CM_APP_STORE_APPLE_ID")
+end
+
+# Authenticate spaceship via a WEB SESSION (Apple ID + password) instead of the
+# .p8 token. With no token set, spaceship routes requests to the iris host
+# (appstoreconnect.apple.com/iris) — the App Store Connect UI's own backend —
+# which still exposes endpoints Apple dropped from the public api host, notably
+# App Privacy "data usages". Creds come from ENV FASTLANE_USER / FASTLANE_PASSWORD;
+# Apple's SMS 2FA is handled automatically (see install_sms_2fa_patch!).
+def asc_web_login!
+  install_sms_2fa_patch!
+  Spaceship::ConnectAPI.login(use_portal: false, use_tunes: true)
+end
+
+# Fully automate Apple's SMS 2FA during web-session login. With no local fastlane
+# to bake a FASTLANE_SESSION, spaceship does a full login each run and Apple texts
+# a code to the account's trusted number, which is wired to an SMS-retrieval
+# gateway (ENV SMS_2FA_GATEWAY_URL). We override spaceship's interactive code
+# prompt (Spaceship::Client#ask_for_2fa_code) to poll that gateway, extract the
+# freshly arrived code, and return it — no human. SPACESHIP_2FA_SMS_DEFAULT_PHONE_NUMBER
+# (set by the orchestrator) forces the SMS path so this prompt is actually reached.
+def install_sms_2fa_patch!
+  UI.user_error!("SMS_2FA_GATEWAY_URL not set — cannot auto-handle Apple 2FA") if ENV["SMS_2FA_GATEWAY_URL"].to_s.empty?
+
+  Spaceship::Client.class_eval do
+    define_method(:ask_for_2fa_code) do |text|
+      code_length = (text[/(\d+)\s*digit/, 1] || "6").to_i
+      pattern = /\b(\d{#{code_length}})\b/
+      UI.message("Auto-fetching #{code_length}-digit Apple 2FA code from SMS gateway...")
+      sleep(8) # let Apple's SMS land at the gateway first
+      deadline = Time.now + 150
+      loop do
+        begin
+          body = Net::HTTP.get(URI(ENV.fetch("SMS_2FA_GATEWAY_URL"))).to_s
+          # Verbose on purpose for the first live runs — the gateway's exact
+          # response schema is unknown; trim/remove this log once confirmed.
+          UI.message("SMS gateway raw (first 300 chars): #{body[0, 300]}")
+          code = body.scan(pattern).flatten.last
+          if code
+            UI.success("Got 2FA code from SMS gateway")
+            break code
+          end
+          UI.message("No #{code_length}-digit code in gateway response yet; retrying...")
+        rescue => e
+          UI.message("SMS gateway fetch error (#{e.message}); retrying...")
+        end
+        UI.user_error!("No #{code_length}-digit 2FA code from the SMS gateway within timeout") if Time.now > deadline
+        sleep(6)
+      end
+    end
+  end
+end
+
+# Every current App Store territory id (USA, GBR, ...).
+def all_territory_ids
+  Spaceship::ConnectAPI.get_territories(limit: 200)
+                       .all_pages
+                       .flat_map(&:to_models)
+                       .map(&:id)
+end
+
+# Make the app available in every current territory AND auto-enroll in new ones.
+# spaceship has no high-level setter, so we POST v2/appAvailabilities through its
+# request client (v1/appAvailabilities no longer exists). The territoryAvailabilities
+# are *created inline*, so each included entity's `id` must be a JSON:API local-id
+# placeholder ("${...}"), NOT the real territory code — Apple rejects real ids here
+# ("the id must be a local id with the format '${local-id}'"). The local id only has
+# to match between the relationship ref and the included entity; the real territory
+# id goes on each entity's `territory` relationship. Non-fatal: a new app usually
+# defaults to all territories, so a failure here shouldn't block submit.
+def set_available_everywhere(app_id)
+  territory_ids = all_territory_ids
+  client = Spaceship::ConnectAPI.client.tunes_request_client
+
+  body = {
+    data: {
+      type: "appAvailabilities",
+      attributes: { availableInNewTerritories: true },
+      relationships: {
+        app: { data: { type: "apps", id: app_id } },
+        territoryAvailabilities: {
+          # Reference the inline-created entities by their local ids ("${USA}", ...).
+          data: territory_ids.map { |t| { type: "territoryAvailabilities", id: "${#{t}}" } }
+        }
+      }
+    },
+    # Braces (not do/end) so the block binds to .map inside the hash literal.
+    # Inline creation: id is the local placeholder; the real territory id is in the
+    # `territory` relationship.
+    included: territory_ids.map { |t|
+      {
+        type: "territoryAvailabilities",
+        id: "${#{t}}",
+        attributes: { available: true },
+        relationships: { territory: { data: { type: "territories", id: t } } }
+      }
+    }
+  }
+
+  begin
+    client.post("v2/appAvailabilities", body)
+  rescue => e
+    UI.important("appAvailabilities failed (#{e.message}); continuing — a new app " \
+                 "usually defaults to all territories, so this should not block submit.")
+  end
+  territory_ids.length
+end
+
+# Set the app to Free. Apple removed the legacy price-tier `prices` relationship
+# on `apps` (it now 400s with "'prices' is not a relationship on the resource
+# 'apps'"), so spaceship's patch_app(app_price_tier_id:) no longer works. The
+# modern path is appPriceSchedules + price points: find the $0 price point for a
+# base territory (USA) and POST a one-line manual price schedule referencing it;
+# Apple equalizes the price across the other territories. Done through the raw
+# request client (spaceship has no high-level setter), like set_available_everywhere.
+def free_price_point_id(client, app_id, territory)
+  params = client.build_params(filter: { territory: territory }, limit: 200)
+  url = "v1/apps/#{app_id}/appPricePoints"
+  10.times do
+    # First call uses (path, params); pagination follows full next_url, no params.
+    resp = url.start_with?("http") ? client.get(url) : client.get(url, params)
+    points = (resp.body && resp.body["data"]) || []
+    free = points.find { |p| cp = p.dig("attributes", "customerPrice"); cp && cp.to_f == 0.0 }
+    return free["id"] if free
+    nxt = resp.next_url
+    break unless nxt
+    url = nxt
+  end
+  nil
+end
+
+# Idempotency for pricing. Every app has an appPriceSchedule *object* — Apple
+# auto-creates the shell — so its mere existence means nothing (a fresh app has an
+# empty schedule). We must check whether it has an actual MANUAL PRICE: if it does,
+# a price is set (for us, Free) → skip, because re-POSTing over an existing price
+# 500s. Empty manualPrices → no price yet → set Free.
+def app_has_manual_price?(client, app_id)
+  resp = client.get("v1/apps/#{app_id}/appPriceSchedule", { "include" => "manualPrices" })
+  Array(resp.body && resp.body["included"]).any? { |x| x["type"] == "appPrices" }
+rescue => e
+  UI.message("Could not read current price schedule (#{e.message}); will set Free")
+  false
+end
+
+def set_free_price!(app_id)
+  client = Spaceship::ConnectAPI.client.tunes_request_client
+  base_territory = "USA"
+
+  if app_has_manual_price?(client, app_id)
+    UI.message("Price already set; skipping.")
+    return
+  end
+
+  point_id = free_price_point_id(client, app_id, base_territory)
+  UI.user_error!("No $0 price point found for #{base_territory}; cannot set Free") unless point_id
+
+  # `${price1}` is a client-side placeholder id linking the manualPrices
+  # relationship to the included appPrice (Apple's JSON:API convention; the same
+  # token spaceship itself used in the old patch_app price path). It is a literal
+  # string, not Ruby interpolation (that would be #{...}).
+  body = {
+    data: {
+      type: "appPriceSchedules",
+      relationships: {
+        app: { data: { type: "apps", id: app_id } },
+        baseTerritory: { data: { type: "territories", id: base_territory } },
+        manualPrices: { data: [{ type: "appPrices", id: "${price1}" }] }
+      }
+    },
+    included: [
+      {
+        type: "appPrices",
+        id: "${price1}",
+        attributes: { startDate: nil },
+        relationships: {
+          appPricePoint: { data: { type: "appPricePoints", id: point_id } }
+        }
+      }
+    ]
+  }
+  client.post("v1/appPriceSchedules", body)
+end
+
+# App Privacy "nutrition label" (the data-collection declaration). Apple BLOCKS
+# submission until this is *published*. Apple removed it from the public .p8 API
+# (the `dataUsages` relationship no longer exists on api.appstoreconnect.apple.com),
+# so this MUST run under a WEB SESSION (see asc_web_login!): with no token,
+# spaceship routes to the iris backend that still serves it. The app bundles no
+# analytics / ads / tracking / crash SDKs, so we declare "Data Not Collected" and
+# publish. Idempotent: only changes/publishes when the state isn't already right.
+# Call it from the `web_session_declarations` lane (web auth) — NOT a token lane.
+def publish_data_not_collected!(app_id)
+  usages = Spaceship::ConnectAPI::AppDataUsage.all(app_id: app_id, includes: "dataProtection")
+  already_not_collected = usages.size == 1 && usages.first.is_not_collected?
+
+  # "Data Not Collected" is mutually exclusive with any other declaration, so the
+  # only correct state is exactly one usage flagged not-collected. Clear any
+  # leftovers before declaring it.
+  unless already_not_collected
+    usages.each(&:delete!)
+    Spaceship::ConnectAPI::AppDataUsage.create(
+      app_id: app_id,
+      app_data_usage_protection_id: "DATA_NOT_COLLECTED"
+    )
+    UI.message("App Privacy: declared 'Data Not Collected'")
+  end
+
+  # Declaring a usage un-publishes the label, so publish whenever we changed it
+  # (or whenever it simply isn't published yet).
+  state = Spaceship::ConnectAPI::AppDataUsagesPublishState.get(app_id: app_id)
+  if already_not_collected && state&.published
+    UI.message("App Privacy already published; nothing to do")
+  else
+    state.publish!
+    UI.success("App Privacy: 'Data Not Collected' published")
+  end
+end
+
+# App Store Connect webhook: push event notifications (review-status changes,
+# build/beta events, ...) to an external endpoint so nobody has to sit watching
+# App Review. Per-app, public ASC API, same .p8 key — fits next to the other
+# declarations. The orchestrator builds ASC_WEBHOOK_URL from the Jira domain and
+# injects it (+ ASC_WEBHOOK_SECRET) as Codemagic env vars; if the URL is unset
+# (no domain on the ticket) we just skip. Non-fatal: a webhook hiccup must never
+# block the submission.
+def create_status_webhook!(app_id)
+  name = "auto-publish-status"
+
+  url = ENV["ASC_WEBHOOK_URL"].to_s.strip
+  if url.empty?
+    UI.message("ASC_WEBHOOK_URL not set — skipping webhook")
+    return
+  end
+
+  # The receiver validates by payload shape, not signature, but Apple still
+  # requires a non-empty secret on the webhook.
+  secret = ENV["ASC_WEBHOOK_SECRET"].to_s
+  secret = "appstore-status-webhook" if secret.empty?
+
+  # Idempotent: don't add a duplicate on re-runs.
+  if Spaceship::ConnectAPI::Webhook.all(app_id: app_id).any? { |w| w.name == name }
+    UI.message("Webhook '#{name}' already exists — skipping")
+    return
+  end
+
+  # Subscribe to every event type spaceship knows (Apple's full set). If Apple
+  # rejects the full list, fall back to the one event we actually need — the
+  # app-version state change that says review passed/failed.
+  et = Spaceship::ConnectAPI::Webhook::EventType
+  events = et.constants.map { |c| et.const_get(c) }
+  begin
+    Spaceship::ConnectAPI::Webhook.create(
+      app_id: app_id, name: name, url: url, secret: secret,
+      enabled: true, event_types: events
+    )
+  rescue => e
+    UI.important("Webhook with all #{events.length} event types failed " \
+                 "(#{e.message}); retrying with review-status only")
+    events = [et::APP_STORE_VERSION_APP_VERSION_STATE_UPDATED]
+    Spaceship::ConnectAPI::Webhook.create(
+      app_id: app_id, name: name, url: url, secret: secret,
+      enabled: true, event_types: events
+    )
+  end
+  UI.success("Webhook '#{name}' → #{url} (#{events.length} event type(s))")
+rescue => e
+  UI.important("Webhook creation failed (#{e.message}); continuing without it.")
+end
+
+# Raw request to Apple's `ppm` web service — used by declarations that have no
+# .p8 API (DSA trader status, regulated-medical-device) and live only in the ASC
+# UI's own backend, reachable over the SAME web session. spaceship has no ppm
+# client, so we carry the session cookies (Spaceship::Tunes.client.cookie) and the
+# `X-CSRF-ITC` token + Referer the service expects. Those differ per micro-frontend:
+# the agreements service (DSA) wants `agreements-ui` + /business (the defaults);
+# the complianceform service (medical device) wants `[asc-ui]` + the app's
+# distribution/info page. Endpoints/shapes come from captured HARs.
+#
+# ppm_http is the low-level call: it returns the raw Net::HTTP response WITHOUT
+# raising, so a caller can inspect the status (e.g. treat 404 as "not applicable").
+# Most callers want ppm_request, which raises on any non-2xx and returns parsed JSON.
+def ppm_http(method, path, body = nil, csrf: "agreements-ui", referer: "/business",
+             accept: "application/json")
+  host = "https://appstoreconnect.apple.com"
+  uri = URI("#{host}#{path}")
+  req = (method == :post ? Net::HTTP::Post : Net::HTTP::Get).new(uri)
+  req["Cookie"] = Spaceship::Tunes.client.cookie
+  req["X-CSRF-ITC"] = csrf
+  req["Accept"] = accept
+  req["User-Agent"] = "AppStorePublisher (spaceship web session)"
+  req["Referer"] = "#{host}#{referer}"
+  if body
+    req["Content-Type"] = "application/json"
+    req.body = body.to_json
+  end
+  Net::HTTP.start(uri.host, uri.port, use_ssl: true) { |http| http.request(req) }
+end
+
+def ppm_parse(res)
+  res.body.to_s.strip.empty? ? {} : JSON.parse(res.body)
+end
+
+def ppm_request(method, path, body = nil, **opts)
+  res = ppm_http(method, path, body, **opts)
+  unless res.code.to_i.between?(200, 299)
+    UI.user_error!("ppm #{method.upcase} #{path} -> HTTP #{res.code}: #{res.body.to_s[0, 300]}")
+  end
+  ppm_parse(res)
+end
+
+# Resolve the ppm accountId (a UUID) for the current team via accountLookup.
+# spaceship's team_id is the LEGACY numeric provider id, which accountLookup
+# rejects with 403 — it wants the MODERN provider UUID (publicProviderId), so we
+# go through itc_provider_uuid first. Shared by the DSA + medical-device flows.
+def ppm_account_id
+  provider_uuid = itc_provider_uuid
+  UI.user_error!("Could not resolve the ITC provider UUID (publicProviderId) for ppm") if provider_uuid.to_s.empty?
+  account_id = ppm_request(:get, "/ppm/v1/accountLookup/teamTypes/ITC/teamIds/#{provider_uuid}")["accountId"]
+  UI.user_error!("Could not resolve ppm accountId for provider #{provider_uuid}") if account_id.to_s.empty?
+  account_id
+end
+
+# spaceship's team_id is the LEGACY numeric provider id, which ppm's accountLookup
+# rejects with 403. ppm wants the MODERN provider UUID — the olympus session's
+# `publicProviderId`. Resolve it from the session's current provider, with a
+# fallback of matching the numeric team_id against availableProviders.
+def itc_provider_uuid
+  c = Spaceship::Tunes.client
+  uuid = (c.user_details_data["provider"] || {})["publicProviderId"]
+  return uuid if uuid && !uuid.to_s.empty?
+  team = c.teams.find { |t| t["providerId"].to_s == c.team_id.to_s }
+  team && team["publicProviderId"]
+end
+
+def declare_not_trader!
+  account_id = ppm_account_id
+
+  # Idempotent: skip if this account already declared "not a trader".
+  current = ppm_request(:get, "/ppm/v1/accounts/#{account_id}/sellerInfo")["traderDeclaration"]
+  if current == "DECLARED_NOT_TRADER"
+    UI.message("DSA already 'not a trader' (account #{account_id}); skipping.")
+    return
+  end
+
+  entities = ppm_request(:get, "/ppm/v1/accounts/#{account_id}/legalEntities")["data"] || []
+  entity = entities.find { |e| e["accountSource"] == "ITUNES_CONNECT_SOURCE" } || entities.first
+  UI.user_error!("No legal entity for account #{account_id}") unless entity
+  legal_entity_id = entity["legalEntityId"]
+
+  # Fresh optimisticLock (concurrency token) from the metadata POST.
+  base = "/ppm/v1/accounts/#{account_id}/legalEntities/#{legal_entity_id}/sellerInfo"
+  meta = ppm_request(:post, "#{base}/metadata", { accountId: account_id, legalEntityId: legal_entity_id })
+  lock = meta.dig("data", "optimisticLock")
+  UI.user_error!("No optimisticLock from sellerInfo/metadata") if lock.to_s.empty?
+
+  # Declare "not a trader".
+  result = ppm_request(:post, base, {
+    accountId: account_id, legalEntityId: legal_entity_id,
+    optimisticLock: lock, traderDeclaration: "DECLARED_NOT_TRADER"
+  })
+  got = result.dig("data", "traderDeclaration")
+  UI.user_error!("DSA declaration did not stick (got #{got.inspect})") unless got == "DECLARED_NOT_TRADER"
+  UI.success("DSA: declared 'not a trader' (account #{account_id})")
+end
+
+# Regulated-medical-device declaration ("No"). Like DSA + App Privacy it has no
+# .p8 API — it lives on Apple's ppm *complianceform* service, reachable over the
+# same web session, but under a different micro-frontend than agreements: it needs
+# the `X-CSRF-ITC: [asc-ui]` token and the app's distribution/info page as Referer
+# (from a captured HAR).
+#
+# MEDICAL_DEVICE is a GLOBAL compliance-form requirement (keyed by requirementName),
+# so its requirementId is stable across apps — the per-app artifact is the *form*
+# we POST, not the requirement. There is no working "list requirements" endpoint
+# (the collection GET 404s), and the UI already knows this id, so we POST the form
+# straight to it (matching the captured HAR). The id is overridable via
+# MEDICAL_DEVICE_REQUIREMENT_ID in case Apple ever rotates it.
+#
+# The question shows in App Information even for some non-medical apps; we submit
+# "No" whenever it applies. A 404 on the POST means the app isn't subject to the
+# requirement at all (question not shown) → nothing to declare, skip quietly.
+# Idempotent: re-POSTing the same "no" returns 200. Run under asc_web_login!.
+def declare_not_medical_device!(app_id)
+  account_id = ppm_account_id
+  default_req = "c6a6e3f1-97c5-4180-8eed-e7c7f6f72a5a"
+  requirement_id = ENV["MEDICAL_DEVICE_REQUIREMENT_ID"].to_s.strip
+  requirement_id = default_req if requirement_id.empty?
+
+  csrf = "[asc-ui]"
+  referer = "/apps/#{app_id}/distribution/info"
+  accept = "application/vnd.api+json, application/json, text/csv"
+  path = "/ppm/complianceform/v1/accounts/#{account_id}/contents/#{app_id}/requirements/#{requirement_id}/forms"
+  body = {
+    accountId: account_id,
+    contentId: app_id,
+    requirementId: requirement_id,
+    requirementName: "MEDICAL_DEVICE",
+    countriesOrRegions: %w[EEA GBR USA],
+    medicalDeviceData: { declaration: "no" }
+  }
+
+  res = ppm_http(:post, path, body, csrf: csrf, referer: referer, accept: accept)
+  if res.code.to_i == 404
+    UI.message("Medical-device requirement not applicable to app #{app_id} (404); skipping.")
+    return
+  end
+  unless res.code.to_i.between?(200, 299)
+    UI.user_error!("ppm POST #{path} -> HTTP #{res.code}: #{res.body.to_s[0, 300]}")
+  end
+  got = ppm_parse(res).dig("data", "medicalDeviceData", "declaration")
+  UI.user_error!("Medical-device declaration did not stick (got #{got.inspect})") unless got.to_s.downcase == "no"
+  UI.success("Regulated medical device: declared 'No' (app #{app_id})")
+end
+
+# The publish pipeline uploads en-GB metadata ONLY, so the app's *primary* App
+# Store locale must be en-GB. If it's left at the account default (usually en-US),
+# Apple maps the listing to that primary locale — which has no metadata — and the
+# submission stalls. Account setup sometimes misses this, so we enforce it. Must
+# run AFTER `deliver` (upload_metadata) has created the en-GB localization, so
+# en-GB is a valid primary. Idempotent: skips when already en-GB. .p8 API.
+def ensure_primary_locale!(app_id, desired = "en-GB")
+  app = Spaceship::ConnectAPI::App.get(app_id: app_id)
+  current = (app.primaryLocale rescue nil)
+  if current == desired
+    UI.message("Primary locale already #{desired}; nothing to do.")
+    return
+  end
+  Spaceship::ConnectAPI.patch_app(app_id: app_id, attributes: { primaryLocale: desired })
+  UI.success("Primary locale: #{current.inspect} -> #{desired}")
+end
+
+# Switching the primary locale is NOT enough on its own: any locale added earlier
+# (e.g. a leftover en-US from account setup) stays on the listing, and an
+# incomplete extra locale blocks the submission. We upload metadata for en-GB
+# only, so strip every OTHER locale from BOTH surfaces that gate a submit — the
+# editable App Store version (description/keywords/screenshots/...) and the App
+# Info (name/subtitle/...). The current primary locale cannot be deleted, so this
+# MUST run AFTER ensure_primary_locale! switched primary to en-GB. Idempotent:
+# once only en-GB remains there's nothing left to delete. .p8 API.
+def prune_locales_to_en_gb!(app_id, keep = "en-GB")
+  platform = Spaceship::ConnectAPI::Platform::IOS
+  app = Spaceship::ConnectAPI::App.get(app_id: app_id)
+
+  version = app.get_edit_app_store_version(platform: platform)
+  if version
+    version.get_app_store_version_localizations.each do |loc|
+      next if loc.locale == keep
+      loc.delete!
+      UI.message("Removed App Store version locale '#{loc.locale}'")
+    end
+  else
+    UI.message("No editable App Store version; skipping version-locale prune")
+  end
+
+  # spaceship has used both names across versions; tolerate either.
+  app_info = (app.get_edit_app_info if app.respond_to?(:get_edit_app_info)) ||
+             (app.fetch_edit_app_info if app.respond_to?(:fetch_edit_app_info))
+  if app_info
+    app_info.get_app_info_localizations.each do |loc|
+      next if loc.locale == keep
+      loc.delete!
+      UI.message("Removed App Info locale '#{loc.locale}'")
+    end
+  else
+    UI.message("No editable App Info; skipping app-info-locale prune")
+  end
+
+  UI.success("Locales pruned to '#{keep}' only")
+end
+
+# ─────────────────────────────────────────────────────────────────────────
+# Lanes
+# ─────────────────────────────────────────────────────────────────────────
+platform :ios do
+  desc "Upload App Store metadata only"
+  lane :upload_metadata do
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_KEY_IDENTIFIER"],
+      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+      key_content: ENV["APP_STORE_CONNECT_PRIVATE_KEY"],
+      is_key_content_base64: false
+    )
+
+    opts = {
+      api_key: api_key,
+      force: true,
+      skip_binary_upload: true,
+      skip_screenshots: false,
+      overwrite_screenshots: true,
+      skip_metadata: false,
+      automatic_release: true,
+      submit_for_review: false,
+      run_precheck_before_submit: false,
+      metadata_path: "./fastlane/metadata",
+      copyright: ENV["APP_COPYRIGHT"],
+      primary_category: ENV["APP_PRIMARY_CATEGORY"],
+      app_rating_config_path: "./fastlane/itc_app_rating_config.json",
+      app_review_information: {
+        first_name: "Ivan",
+        last_name: "Ivanenko",
+        phone_number: "+380999999999",
+        email_address: "ivan.ivanenko@gmail.com",
+        notes: "No special review instructions."
+      }
+    }
+
+    secondary = ENV["APP_SECONDARY_CATEGORY"]
+    opts[:secondary_category] = secondary if secondary && !secondary.empty?
+
+    deliver(opts)
+  end
+
+  desc "Set the App Store Connect declarations the .p8 API can do: primary locale " \
+       "(en-GB) + prune all other locales, content rights, Free price, availability " \
+       "(all + new territories), and a status webhook (when ASC_WEBHOOK_URL is set). " \
+       "App-level, so it does not need a build, but must run AFTER upload_metadata so " \
+       "en-GB exists as a localization. (App Privacy + DSA + medical-device need a " \
+       "web session — see `web_session_declarations`.)"
+  lane :set_app_compliance do
+    asc_login!
+    app_id = asc_app_id!
+
+    # Force the primary App Store locale to the one we actually upload metadata for
+    # (en-GB), then remove every other locale — a leftover locale (e.g. en-US) with
+    # no metadata blocks the submission. Prune MUST follow the primary switch (the
+    # current primary can't be deleted). Safe here because upload_metadata's
+    # `deliver` ran first and created the en-GB localization.
+    ensure_primary_locale!(app_id)
+    prune_locales_to_en_gb!(app_id)
+
+    # Content rights — attributes only. (Do NOT pass app_price_tier_id here: it
+    # adds a `prices` relationship that Apple removed from `apps`. Price is set
+    # via appPriceSchedules just below.)
+    Spaceship::ConnectAPI.patch_app(
+      app_id: app_id,
+      attributes: { contentRightsDeclaration: "DOES_NOT_USE_THIRD_PARTY_CONTENT" }
+    )
+    UI.success("Content rights: no third-party content")
+
+    set_free_price!(app_id)
+    UI.success("Price: Free")
+
+    territory_count = set_available_everywhere(app_id)
+    UI.success("Availability: #{territory_count} territories + auto-enroll new ones")
+
+    create_status_webhook!(app_id)
+  end
+
+  desc "Declarations with no .p8 API, done over ONE web session (auto SMS 2FA): " \
+       "App Privacy 'Data Not Collected' (published — required before submit), " \
+       "DSA trader status ('not a trader', account-level), and the regulated-" \
+       "medical-device form ('No', whenever the question applies). All idempotent. " \
+       "One login covers all three so there's a single 2FA round-trip."
+  lane :web_session_declarations do
+    asc_web_login!
+    # App Privacy is a hard submit-blocker, so it's fatal if it fails.
+    publish_data_not_collected!(asc_app_id!)
+    # DSA is account-level; keep it non-fatal so a hiccup doesn't block the
+    # (already-published) privacy label. It's idempotent — a later run retries.
+    begin
+      declare_not_trader!
+    rescue => e
+      UI.important("DSA declaration failed (#{e.message}); continuing. It's account-level " \
+                   "and idempotent — a later run (or ASC -> Business -> Agreements) sets it.")
+    end
+    # Regulated-medical-device "No" — declare_not_medical_device! POSTs directly
+    # and skips cleanly (404) when the app isn't subject to the question. Non-fatal
+    # (web-session, idempotent) so a hiccup never blocks the published privacy label.
+    begin
+      declare_not_medical_device!(asc_app_id!)
+    rescue => e
+      UI.important("Medical-device declaration failed (#{e.message}); continuing. It's " \
+                   "idempotent — a later run retries; or set it by hand in ASC.")
+    end
+  end
+
+  desc "Wait for the build to finish Apple processing, attach it, and submit " \
+       "the version for review (3-step reviewSubmissions flow). Auto-release " \
+       "after approval is already configured by `upload_metadata`."
+  lane :submit_for_review do
+    asc_login!
+    app_id = asc_app_id!
+    platform = Spaceship::ConnectAPI::Platform::IOS
+
+    # 1. The editable version (created by `deliver` in upload_metadata).
+    version = nil
+    30.times do
+      app = Spaceship::ConnectAPI::App.get(app_id: app_id)
+      version = app.get_edit_app_store_version(platform: platform)
+      break if version
+      UI.message("Waiting for the App Store version to exist (deliver)...")
+      sleep(30)
+    end
+    UI.user_error!("No editable App Store version appeared in time") unless version
+    UI.success("Version #{version.version_string} (#{version.id}), state #{version.app_store_state}")
+
+    # Idempotency: if a prior run already submitted this version, stop here.
+    already_submitted = %w[
+      WAITING_FOR_REVIEW IN_REVIEW PENDING_DEVELOPER_RELEASE
+      PENDING_APPLE_RELEASE READY_FOR_SALE PROCESSING_FOR_APP_STORE
+    ]
+    if already_submitted.include?(version.app_store_state.to_s)
+      UI.important("Version already #{version.app_store_state}; nothing to submit.")
+      next
+    end
+
+    # 2. A build that has finished Apple processing (can take up to ~1h).
+    build = nil
+    60.times do
+      build = Spaceship::ConnectAPI::Build.all(
+        app_id: app_id, version: version.version_string,
+        processing_states: "VALID", limit: 10
+      ).first
+      build ||= Spaceship::ConnectAPI::Build.all(
+        app_id: app_id, processing_states: "VALID", limit: 10
+      ).first
+      break if build
+      UI.message("Waiting for a build to finish Apple processing...")
+      sleep(60)
+    end
+    UI.user_error!("No processed (VALID) build appeared in time") unless build
+
+    # 3. Pin the build to the version.
+    Spaceship::ConnectAPI.patch_app_store_version_with_build(
+      app_store_version_id: version.id, build_id: build.id
+    )
+    UI.success("Attached build #{build.version} (#{build.id})")
+
+    # 4. Build (or reuse) a review submission and make sure our version is an
+    #    item in it before submitting.
+    submission = Spaceship::ConnectAPI.get_review_submissions(
+      app_id: app_id,
+      filter: { state: Spaceship::ConnectAPI::ReviewSubmission::ReviewSubmissionState::READY_FOR_REVIEW }
+    ).to_models.find { |s| s.platform == platform }
+    submission ||= Spaceship::ConnectAPI.post_review_submission(app_id: app_id, platform: platform).to_models.first
+
+    # Add the version as a review item. Idempotent: skip if the submission already
+    # has items (a prior run). We do NOT swallow a real failure here — a submission
+    # with no version item is exactly what makes submit_for_review bounce with
+    # "an appStoreVersions must be included", so the add must actually succeed.
+    # Retry: right after attaching the build, Apple can briefly treat the version
+    # as not-yet-submittable (eventual consistency).
+    existing_items = Spaceship::ConnectAPI::ReviewSubmissionItem.all(review_submission_id: submission.id)
+    if existing_items.empty?
+      added = false
+      last_err = nil
+      5.times do
+        begin
+          submission.add_app_store_version_to_review_items(app_store_version_id: version.id)
+          added = true
+          break
+        rescue => e
+          last_err = e
+          UI.message("Version not addable to review yet (#{e.message}); retrying in 30s...")
+          sleep(30)
+        end
+      end
+      UI.user_error!("Could not add version #{version.id} to the review submission: #{last_err&.message}") unless added
+    else
+      UI.message("Review submission #{submission.id} already has #{existing_items.size} item(s); not re-adding.")
+    end
+
+    submission.submit_for_review
+    UI.success("Submitted for review (reviewSubmission #{submission.id}). " \
+               "Auto-release after approval is enabled.")
+  end
+end

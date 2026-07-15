@@ -86,12 +86,48 @@ workflows:
         script: |
           cd iosApp
           ls fastlane/metadata
-          ls fastlane/metadata/en-CA
+          ls fastlane/metadata/en-GB
 
       - name: Upload metadata to App Store Connect
         script: |
           cd iosApp
           bundle exec fastlane ios upload_metadata
+
+      - name: Set App Store Connect declarations (content rights, price, availability, webhook)
+        script: |
+          cd iosApp
+          bundle exec fastlane ios set_app_compliance
+
+      - name: Web-session declarations — App Privacy + DSA trader status (no .p8 API)
+        script: |
+          cd iosApp
+          bundle exec fastlane ios web_session_declarations
+
+    artifacts:
+      - iosApp/fastlane/logs/**/*
+
+  submit_ios_for_review:
+    name: Submit iOS for review
+    instance_type: mac_mini_m2
+    # Apple build processing can take up to ~1h after upload; the lane polls
+    # for it, so give the job plenty of headroom.
+    max_build_duration: 120
+
+    environment:
+      xcode: 16.2
+      groups:
+        - "9999"
+
+    scripts:
+      - name: Install Ruby dependencies
+        script: |
+          cd iosApp
+          bundle install
+
+      - name: Submit for review (wait for build, attach, submit)
+        script: |
+          cd iosApp
+          bundle exec fastlane ios submit_for_review
 
     artifacts:
       - iosApp/fastlane/logs/**/*
