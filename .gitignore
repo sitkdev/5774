@@ -5,7 +5,7 @@
 xcuserdata
 !src/**/build/
 local.properties
-./scripts/.publish-cache.json
+scripts/.publish-cache.json
 .idea
 .DS_Store
 captures
