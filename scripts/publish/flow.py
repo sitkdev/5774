@@ -17,12 +17,17 @@ from . import (
     project_edits,
     telegraph,
     utils,
+    validation,
 )
 from .constants import (
+    BUILD_POLL_INTERVAL,
     GSHEET_ID,
+    METADATA_BUILD_TIMEOUT,
     METADATA_WORKFLOW_ID,
     RELEASE_BRANCH,
+    RELEASE_BUILD_TIMEOUT,
     RELEASE_WORKFLOW_ID,
+    SUBMIT_BUILD_TIMEOUT,
     SUBMIT_WORKFLOW_ID,
 )
 
@@ -141,7 +146,6 @@ def _split_name(full: str) -> tuple:
 
 def _git_steps(
     ticket_number: str,
-    cache: config.Cache,
     ticket: jira.AppTicket,
     username_hint: Optional[str] = None,
     repo_hint: Optional[str] = None,
@@ -151,14 +155,8 @@ def _git_steps(
     ):
         utils.die("Aborted at git step")
 
-    username = username_hint or cache.get("github.username") or utils.prompt("GitHub username (production account)")
-    token = (
-        ticket.github_token
-        or cache.get("github.token")
-        or utils.prompt("GitHub PAT for production account")
-    )
-    cache.set("github.username", username)
-    cache.set("github.token", token)
+    username = username_hint or utils.prompt("GitHub username (production account)")
+    token = ticket.github_token or utils.prompt("GitHub PAT for production account")
 
     repo_name = repo_hint or github_remote.find_repo_name(username, token, ticket_number)
     github_remote.ensure_branch(RELEASE_BRANCH)
@@ -270,7 +268,6 @@ def _set_cm_metadata_vars(
 
 def run():
     cfg = config.GlobalConfig.load()
-    cache = config.Cache()
     summary: dict = {}
 
     # ── Step 0: gather ────────────────────────────────────────────
@@ -293,6 +290,11 @@ def run():
     if_key = _pick_if_key(ticket, jc)
     story = jc.get_if_story(if_key)
     print_jira_block(ticket, story)
+
+    # Validate the operator-filled data up front — fail fast here (with every
+    # problem at once) instead of deep in the Codemagic Upload Metadata stage.
+    validation.check(ticket, story)
+
     summary["jira_ticket"] = (ticket.key, _jira_issue_url(cfg.jira_browse_base_url, ticket.key))
     summary["if_story"] = (story.key, _jira_issue_url(cfg.jira_browse_base_url, story.key))
 
@@ -300,7 +302,7 @@ def run():
         sys.exit(0)
 
     # ── Preflight: verify external services fail-fast ────────────
-    pre = preflight.run(cfg, cache, jc, ticket, ticket_number)
+    pre = preflight.run(cfg, jc, ticket, ticket_number)
     summary["codemagic_app"] = _cm_app_url(pre.cm_app_id)
 
     # ── Steps 1-4, 6: file edits ─────────────────────────────────
@@ -329,22 +331,22 @@ def run():
 
     # ── Steps 8-9: git ────────────────────────────────────────────
     utils.section("STEPS 8-9: Git remote + commit + push")
-    summary["github_repo"] = _git_steps(ticket_number, cache, ticket, pre.gh_username, pre.gh_repo)
+    summary["github_repo"] = _git_steps(ticket_number, ticket, pre.gh_username, pre.gh_repo)
 
     # ── Step 10: Codemagic env vars ──────────────────────────────
     utils.section("STEP 10: Codemagic env vars")
     _set_cm_variables(pre.cm, pre.cm_app_id, ticket_number, ticket, story, pre.p8_contents)
 
-    # ── Step 11: trigger iOS release ─────────────────────────────
+    # ── Step 11: trigger iOS release (starts building while we prep the sheet) ──
     utils.section("STEP 11: Trigger iOS release workflow")
+    release_build_id = None
     if utils.confirm(
         f"Trigger Codemagic '{RELEASE_WORKFLOW_ID}' build on {RELEASE_BRANCH} branch?",
         default=True,
     ):
-        build_id = pre.cm.trigger_build(pre.cm_app_id, RELEASE_WORKFLOW_ID, RELEASE_BRANCH)
-        url = _cm_build_url(pre.cm_app_id, build_id)
-        print(f"  ✓ Triggered: {url}")
-        summary["release_build"] = url
+        release_build_id = pre.cm.trigger_build(pre.cm_app_id, RELEASE_WORKFLOW_ID, RELEASE_BRANCH)
+        summary["release_build"] = _cm_build_url(pre.cm_app_id, release_build_id)
+        print(f"  ✓ Triggered: {summary['release_build']}")
 
     # ── Step 12: Sheets metadata ─────────────────────────────────
     utils.section("STEP 12: Sheets + Telegraph metadata")
@@ -375,13 +377,10 @@ def run():
     summary["sheet_tab"] = _sheet_tab_url(new_ws.id)
     print(f"  ✓ Duplicated 'Template 3' → '{ticket_number}'")
 
-    tg_token = cache.get("telegraph.accessToken")
-    if not tg_token:
-        tg_token = telegraph.create_account(
-            short_name=ticket.app_name_ios or "App",
-            author_name=ticket.appstore_account_name or "Author",
-        )
-        cache.set("telegraph.accessToken", tg_token)
+    tg_token = telegraph.create_account(
+        short_name=ticket.app_name_ios or "App",
+        author_name=ticket.appstore_account_name or "Author",
+    )
     support_url = telegraph.create_support_page(
         access_token=tg_token,
         app_name=ticket.app_name_ios,
@@ -414,37 +413,99 @@ def run():
 
     # ── Step 13: metadata workflow ───────────────────────────────
     utils.section("STEP 13: Trigger metadata workflow")
+    metadata_build_id = None
     if utils.confirm(f"Trigger Codemagic '{METADATA_WORKFLOW_ID}' build?", default=True):
         metadata_build_id = pre.cm.trigger_build(pre.cm_app_id, METADATA_WORKFLOW_ID, RELEASE_BRANCH)
-        url = _cm_build_url(pre.cm_app_id, metadata_build_id)
-        print(f"  ✓ Triggered: {url}")
-        summary["metadata_build"] = url
+        summary["metadata_build"] = _cm_build_url(pre.cm_app_id, metadata_build_id)
+        print(f"  ✓ Triggered: {summary['metadata_build']}")
+
+    # ── Step 13.5: gate — wait for release + metadata to FINISH ──────────
+    # Builds run one-at-a-time on the Free plan and Codemagic's queue can reorder
+    # near-simultaneous triggers, so we don't trust trigger order: we explicitly
+    # wait for BOTH release and metadata to finish before submitting. submit needs
+    # the processed build (release) AND the uploaded metadata + published App
+    # Privacy (metadata). Waiting here also makes THIS script's exit status reflect
+    # the real Codemagic outcome — a failed build now fails the run instead of
+    # being reported upstream (android-ci-policy) as a successful publish.
+    utils.section("STEP 13.5: Wait for release + metadata builds")
+    release_ok = (
+        _await_build(pre.cm, release_build_id, RELEASE_WORKFLOW_ID,
+                     summary.get("release_build"), RELEASE_BUILD_TIMEOUT)
+        if release_build_id else True
+    )
+    metadata_ok = (
+        _await_build(pre.cm, metadata_build_id, METADATA_WORKFLOW_ID,
+                     summary.get("metadata_build"), METADATA_BUILD_TIMEOUT)
+        if metadata_build_id else True
+    )
 
     # ── Step 14: submit-for-review workflow ──────────────────────
-    # Declarations (content rights / price / availability / App Privacy) run
-    # on Codemagic in the metadata workflow's `set_app_compliance` lane. This
-    # final workflow waits for Apple build-processing (10-60 min) off the
-    # orchestrator, attaches the build, and runs the 3-step submission.
+    # Only start submit once its prerequisites actually succeeded. It waits for
+    # Apple build-processing (10-60 min) inside the build, attaches the build, and
+    # runs the 3-step submission.
     utils.section("STEP 14: Trigger submit-for-review workflow")
-    if utils.confirm(
+    submit_build_id = None
+    submit_ok = True
+    if not (release_ok and metadata_ok):
+        submit_ok = False
+        print("  ⨯ Skipping submit — a prerequisite build did not succeed (see above).")
+    elif utils.confirm(
         f"Trigger Codemagic '{SUBMIT_WORKFLOW_ID}' (waits for build, then submits to review)?",
         default=True,
     ):
         submit_build_id = pre.cm.trigger_build(pre.cm_app_id, SUBMIT_WORKFLOW_ID, RELEASE_BRANCH)
-        url = _cm_build_url(pre.cm_app_id, submit_build_id)
-        print(f"  ✓ Triggered: {url}")
-        summary["submit_build"] = url
+        summary["submit_build"] = _cm_build_url(pre.cm_app_id, submit_build_id)
+        print(f"  ✓ Triggered: {summary['submit_build']}")
+        submit_ok = _await_build(pre.cm, submit_build_id, SUBMIT_WORKFLOW_ID,
+                                 summary["submit_build"], SUBMIT_BUILD_TIMEOUT)
 
-    # ── Manual checklist ─────────────────────────────────────────
-    utils.section("WHAT'S LEFT")
-    print(MANUAL_STEPS)
-
+    # ── Manual checklist + summary (always print; exit reflects build outcome) ──
+    all_ok = release_ok and metadata_ok and submit_ok
+    if all_ok:
+        utils.section("WHAT'S LEFT")
+        print(MANUAL_STEPS)
     _print_summary(summary)
-    _logout_github(cache)
+    _logout_github(pre.gh_username)
+
+    if not all_ok:
+        utils.die(
+            "One or more Codemagic builds did not finish successfully (see the "
+            "build links above). The publish is NOT complete."
+        )
 
 
-def _logout_github(cache: config.Cache):
-    username = cache.get("github.username")
+def _await_build(cm, build_id: str, label: str, url, timeout_s: int) -> bool:
+    """Wait for a triggered Codemagic build to finish. Returns True iff it ended
+    'finished'. Prints status transitions plus a ~5-min heartbeat so a long wait
+    doesn't look hung. Never raises — a timeout/error is reported and returns
+    False (so we never mistake an unconfirmed build for success)."""
+    print(f"  ⏳ Waiting for '{label}' build to finish:\n     {url}")
+    state = {"last": None, "beat": 0.0}
+
+    def _on_poll(status, elapsed):
+        if status != state["last"] or elapsed >= state["beat"]:
+            print(f"     [{int(elapsed) // 60}m] {label}: {status or '(checking...)'}")
+            state["last"] = status
+            state["beat"] = elapsed + 300
+
+    try:
+        status = cm.wait_for_build(
+            build_id, timeout_s=timeout_s, poll_s=BUILD_POLL_INTERVAL, on_poll=_on_poll
+        )
+    except TimeoutError as e:
+        print(f"  ✗ '{label}' build did not finish in time ({e}).\n     {url}")
+        return False
+    except Exception as e:
+        print(f"  ✗ '{label}' build status could not be confirmed ({e}); treating as failed.\n     {url}")
+        return False
+    if status == "finished":
+        print(f"  ✓ '{label}' build finished successfully")
+        return True
+    print(f"  ✗ '{label}' build ended with status '{status}'.\n     {url}")
+    return False
+
+
+def _logout_github(username: str):
     if not username:
         return
     print()

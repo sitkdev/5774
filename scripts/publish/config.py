@@ -7,7 +7,6 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 UTILS_LOCAL_PROPS = PROJECT_ROOT.parent / "Utils" / "local.properties"
-CACHE_PATH = PROJECT_ROOT / "scripts" / ".publish-cache.json"
 
 
 def _load_properties(path: Path) -> dict:
@@ -125,22 +124,3 @@ def _describe_missing(field: str) -> str:
         )
     env_key, prop_key = FIELD_SOURCES[field]
     return f"{field} (env {env_key} or {prop_key})"
-
-
-class Cache:
-    def __init__(self):
-        self.path = CACHE_PATH
-        self._data = {}
-        if self.path.exists():
-            try:
-                self._data = json.loads(self.path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                self._data = {}
-
-    def get(self, key: str, default=None):
-        return self._data.get(key, default)
-
-    def set(self, key: str, value):
-        self._data[key] = value
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(self._data, indent=2), encoding="utf-8")

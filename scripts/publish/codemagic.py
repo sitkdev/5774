@@ -1,9 +1,17 @@
 import re
+import time
 from typing import Optional
 
 import requests
 
 BASE = "https://api.codemagic.io"
+
+# Codemagic build status: ONLY "finished" means success. These are the known
+# terminal failures; every other value (queued/building/publishing/...) is
+# treated as still-in-progress and bounded by the caller's timeout, so an unknown
+# status can never be mistaken for success.
+BUILD_SUCCESS = "finished"
+BUILD_FAILURES = {"failed", "canceled", "cancelled", "timeout", "skipped", "error", "aborted"}
 
 
 def extract_github_repo(app: dict) -> Optional[tuple]:
@@ -121,6 +129,32 @@ class CodemagicClient:
         r.raise_for_status()
         data = r.json()
         return data.get("build", data)
+
+    def wait_for_build(self, build_id: str, timeout_s: int, poll_s: int = 15, on_poll=None) -> str:
+        """Poll a build until it reaches a terminal status; return that status
+        ("finished" == success). Raises TimeoutError if it doesn't finish within
+        timeout_s. Transient errors while polling are swallowed and retried (a
+        long build is polled for many minutes), so only a sustained failure to
+        reach a terminal state trips the timeout. on_poll(status, elapsed) is
+        called each poll for progress reporting.
+        """
+        start = time.monotonic()
+        while True:
+            try:
+                build = self.get_build(build_id)
+                status = str(build.get("status") or build.get("buildStatus") or "").strip().lower()
+            except Exception:
+                status = ""  # transient (network/5xx) — treat as in-progress, retry
+            elapsed = time.monotonic() - start
+            if on_poll:
+                on_poll(status, elapsed)
+            if status == BUILD_SUCCESS or status in BUILD_FAILURES:
+                return status
+            if elapsed >= timeout_s:
+                raise TimeoutError(
+                    f"build {build_id} still {status or 'unknown'!r} after {int(elapsed)}s"
+                )
+            time.sleep(poll_s)
 
     def cancel_build(self, build_id: str):
         r = self.session.post(f"{BASE}/builds/{build_id}/cancel", timeout=30)

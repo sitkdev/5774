@@ -28,6 +28,20 @@ RELEASE_WORKFLOW_ID = "ios_kmp_release"
 METADATA_WORKFLOW_ID = "upload_ios_metadata"
 SUBMIT_WORKFLOW_ID = "submit_ios_for_review"
 
+# ── Codemagic build-wait timeouts (seconds) ──────────────────────────
+# The orchestrator waits for each triggered build to finish before moving on, so
+# a failed build fails the run (rather than being reported upstream as a success)
+# and submit never starts before release+metadata finish. These are generous
+# "give up and report" ceilings — a build normally finishes far sooner. The Free
+# plan runs builds one-at-a-time, so RELEASE's ceiling also allows for it sitting
+# queued behind the metadata build; SUBMIT includes Apple's build-processing wait
+# (up to ~1h, per the lane's own polling). Tune here if your Codemagic account is
+# busier/slower.
+RELEASE_BUILD_TIMEOUT = 120 * 60
+METADATA_BUILD_TIMEOUT = 90 * 60
+SUBMIT_BUILD_TIMEOUT = 140 * 60
+BUILD_POLL_INTERVAL = 15
+
 # ── App Store per-locale character limits ────────────────────────────
 APPSTORE_LIMITS = {
     "name": 30,

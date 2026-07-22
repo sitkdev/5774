@@ -75,6 +75,51 @@ def install_sms_2fa_patch!
   end
 end
 
+# fastlane#30094 — `deliver` uploads screenshots TWICE (even with
+# overwrite_screenshots). App Store Connect publishes each screenshot's
+# `source_file_checksum` a few seconds AFTER flipping it to COMPLETE, but stock
+# `wait_for_complete` returns the moment nothing is UPLOAD_COMPLETE. deliver then
+# runs its verify step in that gap, can't match the local MD5s against the
+# not-yet-published remote checksums, decides the screenshots are "missing", and
+# re-uploads them — and the retry only deletes NON-complete screenshots, so the
+# COMPLETE originals stay and the re-uploads pile on top → duplicates. We hold in
+# `wait_for_complete` until every COMPLETE screenshot has a checksum (≤120s grace),
+# so the verify matches and never re-uploads. Prepended onto Deliver::UploadScreenshots
+# by install_screenshot_duplication_patch! (called in the upload_metadata lane).
+module ScreenshotChecksumWaitPatch
+  def wait_for_complete(iterator, timeout_seconds)
+    super # primary wait: blocks until no screenshot is UPLOAD_COMPLETE (or timeout)
+    deadline = Time.now + 120
+    loop do
+      screenshots = iterator.each_app_screenshot.map { |_, _, s| s }
+      pending = screenshots.count { |s| s.complete? && s.source_file_checksum.to_s.strip.empty? }
+      timed_out = Time.now > deadline
+      if pending.zero? || timed_out
+        if timed_out && pending > 0
+          FastlaneCore::UI.important("#{pending} screenshot checksum(s) still unpublished after 120s; " \
+                                     "proceeding anyway (fastlane#30094).")
+        end
+        # Rebuild the state histogram AFTER waiting so the caller's retry decision
+        # (is_processing) reflects reality, not the pre-wait snapshot super returned.
+        return screenshots.each_with_object(Hash.new(0)) { |s, h| h[s.asset_delivery_state["state"]] += 1 }
+      end
+      FastlaneCore::UI.message("Waiting for App Store Connect to publish #{pending} screenshot " \
+                               "checksum(s) before verifying — avoids duplicate uploads (fastlane#30094)...")
+      sleep(5)
+    end
+  end
+end
+
+# Idempotent; call before `deliver`. `require "deliver"` first so the class is
+# loaded now (the deliver action would otherwise load it lazily, after our patch
+# would have mattered).
+def install_screenshot_duplication_patch!
+  require "deliver"
+  return if Deliver::UploadScreenshots.ancestors.include?(ScreenshotChecksumWaitPatch)
+  Deliver::UploadScreenshots.prepend(ScreenshotChecksumWaitPatch)
+  UI.message("Installed screenshot-duplication guard (fastlane#30094)")
+end
+
 # Every current App Store territory id (USA, GBR, ...).
 def all_territory_ids
   Spaceship::ConnectAPI.get_territories(limit: 200)
@@ -498,6 +543,9 @@ end
 platform :ios do
   desc "Upload App Store metadata only"
   lane :upload_metadata do
+    # Guard against fastlane#30094 (duplicate screenshot uploads) before deliver runs.
+    install_screenshot_duplication_patch!
+
     api_key = app_store_connect_api_key(
       key_id: ENV["APP_STORE_CONNECT_KEY_IDENTIFIER"],
       issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],

@@ -43,19 +43,58 @@ workflows:
             --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
 
+      # Upload the build to App Store Connect WITHOUT TestFlight beta review. The
+      # App Store submission (submit_ios_for_review) only needs the build uploaded
+      # + processed to attach it; external TestFlight beta review would also demand
+      # Beta App Review + Feedback Email test info this flow never sets, and none of
+      # that is needed for an App Store release.
+      #
+      # We ALWAYS build (this same workflow is re-triggered for version updates, so
+      # skipping the build must never happen), then dedup only the UPLOAD by the
+      # IPA's EXACT version + build number: a re-run of the same publish reuses the
+      # same version, which is already on ASC -> skip; a first publish or an update
+      # has a version/build not yet on ASC -> upload. The existence check is a
+      # deterministic ASC query (not error-string matching).
+      - name: Upload build to App Store Connect (no TestFlight beta review)
+        script: |
+          IPA="$(find "$CM_BUILD_DIR/build/ios/ipa" -name '*.ipa' | head -1)"
+          if [ -z "$IPA" ]; then echo "ERROR: no IPA found under build/ios/ipa to upload." >&2; exit 1; fi
+
+          # Read the exact version + build number from the built IPA.
+          WORK="$(mktemp -d)"
+          unzip -qo "$IPA" 'Payload/*.app/Info.plist' -d "$WORK" || true
+          PLIST="$(find "$WORK/Payload" -name 'Info.plist' 2>/dev/null | head -1)"
+          VER="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$PLIST" 2>/dev/null || true)"
+          BLD="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$PLIST" 2>/dev/null || true)"
+          echo "==> Built IPA is version ${VER:-?} build ${BLD:-?}."
+
+          # True iff a build with THIS exact version+build already exists on ASC.
+          build_on_asc() {
+            [ -n "$VER" ] && [ -n "$BLD" ] && \
+              app-store-connect list-builds --application-id "$CM_APP_STORE_APPLE_ID" \
+                --pre-release-version "$VER" --build-version-number "$BLD" --json 2>/dev/null \
+              | grep -q '"id"'
+          }
+
+          if build_on_asc; then
+            echo "==> Build $VER($BLD) is already on App Store Connect - skipping upload (idempotent re-run)."
+          else
+            echo "==> Uploading $IPA to App Store Connect (upload only, no beta review)."
+            if app-store-connect publish --path "$IPA"; then
+              echo "==> Upload complete."
+            elif build_on_asc; then
+              echo "==> Upload reported an error, but build $VER($BLD) is now on ASC - treating as done."
+            else
+              echo "ERROR: upload of build $VER($BLD) failed and it is not on App Store Connect." >&2
+              exit 1
+            fi
+          fi
+
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
-
-    publishing:
-      app_store_connect:
-        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-        submit_to_testflight: true
-        submit_to_app_store: false
 
   upload_ios_metadata:
     name: Upload iOS metadata
