@@ -5,9 +5,9 @@
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>This app uses the camera to let you capture and save photos.</string>
+	<string>This app uses the camera to let you capture and save your artifact to the app storage.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>This app accesses your photo library so you can select images to use in the app.</string>
+	<string>This app accesses your photo library so you can select artifacts and store them inside the app.</string>
     <key>UILaunchScreen</key>
     <dict>
         <key>UIColorName</key>
