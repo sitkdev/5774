@@ -11,7 +11,7 @@ workflows:
         XCODE_SCHEME: "iosApp"
         GRADLE_OPTS: "-Xmx4g -Dorg.gradle.jvmargs='-Xmx4g -XX:MaxMetaspaceSize=512m'"
       groups:
-        - "9999"
+        - "5773"
       ios_signing:
         distribution_type: app_store
         bundle_identifier: $APP_IDENTIFIER
