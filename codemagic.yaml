@@ -65,7 +65,7 @@ workflows:
     environment:
       xcode: 16.2
       groups:
-        - "9999"
+        - "5774"
 
     scripts:
       - name: Install Ruby dependencies
@@ -116,7 +116,7 @@ workflows:
     environment:
       xcode: 16.2
       groups:
-        - "9999"
+        - "5774"
 
     scripts:
       - name: Install Ruby dependencies
