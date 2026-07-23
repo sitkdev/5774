@@ -242,7 +242,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "\"iosApp/Preview Content\"";
 				DEVELOPMENT_TEAM = "${TEAM_ID}";
-				PRODUCT_BUNDLE_IDENTIFIER = com.trid.test.kmpsample;
+				PRODUCT_BUNDLE_IDENTIFIER = com.egcyptx.handler;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iosApp/Info.plist;
@@ -334,7 +334,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "\"iosApp/Preview Content\"";
 				DEVELOPMENT_TEAM = "${TEAM_ID}";
-				PRODUCT_BUNDLE_IDENTIFIER=com.trid.test.kmpsample;
+				PRODUCT_BUNDLE_IDENTIFIER=com.egcyptx.handler;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iosApp/Info.plist;
