@@ -1,0 +1,230 @@
+# Self-contained rejection-detail fetcher, pushed by AppStoreMonitor to a
+# dedicated branch of each app's repo (overwritten on every run, so it's always
+# current — no template, no per-app backport). Logs in to App Store Connect over
+# a WEB SESSION (the only auth that reaches Resolution Center; the .p8 API does
+# not expose it), reads the reviewer's message + guideline codes + attachments
+# from the iris backend the ASC UI itself uses, and POSTs them to
+# REJECTION_CALLBACK_URL. All inputs come from Codemagic env vars that
+# AppStoreMonitor injects right before triggering the build.
+
+default_platform(:ios)
+
+require "net/http"
+require "uri"
+require "json"
+require "base64"
+
+# Authenticate spaceship via a WEB SESSION (Apple ID + password). With no .p8
+# token set, spaceship routes to the iris host (appstoreconnect.apple.com/iris).
+# Creds come from FASTLANE_USER / FASTLANE_PASSWORD; SMS 2FA is automated below.
+def asc_web_login!
+  install_sms_2fa_patch!
+  Spaceship::ConnectAPI.login(use_portal: false, use_tunes: true)
+end
+
+# Fully automate Apple's SMS 2FA: SPACESHIP_2FA_SMS_DEFAULT_PHONE_NUMBER forces the
+# SMS path, and we override spaceship's interactive code prompt to poll an
+# SMS-retrieval gateway (SMS_2FA_GATEWAY_URL) for the freshly-arrived code.
+def install_sms_2fa_patch!
+  UI.user_error!("SMS_2FA_GATEWAY_URL not set — cannot auto-handle Apple 2FA") if ENV["SMS_2FA_GATEWAY_URL"].to_s.empty?
+
+  Spaceship::Client.class_eval do
+    define_method(:ask_for_2fa_code) do |text|
+      code_length = (text[/(\d+)\s*digit/, 1] || "6").to_i
+      pattern = /\b(\d{#{code_length}})\b/
+      UI.message("Auto-fetching #{code_length}-digit Apple 2FA code from SMS gateway...")
+      sleep(8) # let Apple's SMS land at the gateway first
+      deadline = Time.now + 150
+      loop do
+        begin
+          body = Net::HTTP.get(URI(ENV.fetch("SMS_2FA_GATEWAY_URL"))).to_s
+          code = body.scan(pattern).flatten.last
+          if code
+            UI.success("Got 2FA code from SMS gateway")
+            break code
+          end
+          UI.message("No #{code_length}-digit code in gateway response yet; retrying...")
+        rescue => e
+          UI.message("SMS gateway fetch error (#{e.message}); retrying...")
+        end
+        UI.user_error!("No #{code_length}-digit 2FA code from the SMS gateway within timeout") if Time.now > deadline
+        sleep(6)
+      end
+    end
+  end
+end
+
+def asc_app_id!
+  ENV.fetch("CM_APP_STORE_APPLE_ID")
+end
+
+# Raw authenticated GET against the iris backend, carrying the web-session cookie.
+def iris_get(path, params = {})
+  host = "https://appstoreconnect.apple.com"
+  query = params.empty? ? "" : ("?" + URI.encode_www_form(params))
+  uri = URI("#{host}/iris/#{path}#{query}")
+  req = Net::HTTP::Get.new(uri)
+  req["Cookie"] = Spaceship::Tunes.client.cookie
+  req["X-Csrf-Itc"] = "[asc-ui]"
+  req["Accept"] = "application/vnd.api+json"
+  req["User-Agent"] = "AppStoreMonitor (rejection fetcher)"
+  res = Net::HTTP.start(uri.host, uri.port, use_ssl: true) { |http| http.request(req) }
+  unless res.code.to_i.between?(200, 299)
+    UI.user_error!("iris GET #{path} -> HTTP #{res.code}: #{res.body.to_s[0, 300]}")
+  end
+  res.body.to_s.strip.empty? ? {} : JSON.parse(res.body)
+end
+
+# Lightweight attachment references (filename + pre-signed downloadUrl). We deliberately do NOT
+# download or base64 the bytes here — that would bloat the callback POST (a couple of screenshots
+# already exceed the receiver's body limit). AppStoreMonitor fetches the bytes from the URL itself.
+def attachment_refs(resources)
+  (resources || []).select { |r| r["type"].to_s.downcase.include?("attachment") }.map do |a|
+    attrs = a["attributes"] || {}
+    url = attrs["url"] || attrs["downloadUrl"] || attrs["assetUrl"] || (attrs["asset"] || {})["url"]
+    next nil if url.nil? || url.to_s.empty?
+    { "fileName" => (attrs["fileName"] || attrs["name"] || "attachment"), "downloadUrl" => url }
+  end.compact
+end
+
+def post_rejection_callback(url, secret, payload)
+  uri = URI(url)
+  req = Net::HTTP::Post.new(uri)
+  req["Content-Type"] = "application/json"
+  req["X-Rejection-Secret"] = secret unless secret.to_s.empty?
+  req.body = payload.to_json
+  res = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https") { |http| http.request(req) }
+  UI.message("Callback POST -> HTTP #{res.code}")
+end
+
+platform :ios do
+  desc "Fetch Resolution Center rejection details over a web session and POST them " \
+       "to REJECTION_CALLBACK_URL. Triggered by AppStoreMonitor on a REJECTED webhook."
+  lane :fetch_rejection_details do
+    callback_url = ENV["REJECTION_CALLBACK_URL"].to_s
+    UI.user_error!("REJECTION_CALLBACK_URL not set") if callback_url.empty?
+    secret = ENV["REJECTION_CALLBACK_SECRET"].to_s
+    app_id = asc_app_id!
+
+    begin
+      asc_web_login!
+
+      # Walk ALL submissions and collect every rejection (a thread that carries reviewRejections).
+      subs = iris_get("v1/apps/#{app_id}/reviewSubmissions", { "limit" => 200 })["data"] || []
+      UI.user_error!("No review submissions for app #{app_id}") if subs.empty?
+
+      rejections = []
+
+      subs.each do |s|
+        threads = iris_get(
+          "v1/resolutionCenterThreads",
+          { "filter[reviewSubmission]" => s["id"], "include" => "reviewSubmission" }
+        )["data"] || []
+
+        threads.each do |thread|
+          thread_id = thread["id"]
+
+          # Messages carry the reviewer text + per-message attachments, and each links to the
+          # reviewRejection(s) it announced (via include=rejections). Index messages by id and build
+          # the rejection-id -> message map so every rejection can pull the message it belongs to.
+          msg_resp = iris_get(
+            "v1/resolutionCenterThreads/#{thread_id}/resolutionCenterMessages",
+            {
+              "include" => "fromActor,rejections,resolutionCenterMessageAttachments",
+              "limit[rejections]" => 2000,
+              "limit[resolutionCenterMessageAttachments]" => 1000,
+            }
+          )
+          msg_incl_by_id = {}
+          (msg_resp["included"] || []).each { |r| msg_incl_by_id[r["id"]] = r }
+          msg_for_rej = {}
+          (msg_resp["data"] || []).each do |m|
+            (m.dig("relationships", "rejections", "data") || []).each { |rr| msg_for_rej[rr["id"]] ||= m }
+          end
+
+          # reviewRejections are the per-rejection unit: ONE record each. A thread accumulates several
+          # over time (e.g. a 2.1 rejection, then later a 4.3) — each has its own reasons, version and
+          # attachments, so we must NOT merge them into a single row (the old per-thread bug).
+          rej_data = []
+          rej_incl_by_id = {}
+          begin
+            rej = iris_get(
+              "v1/reviewRejections",
+              {
+                "filter[resolutionCenterMessage.resolutionCenterThread]" => thread_id,
+                "include" => "appStoreVersion,rejectionAttachments",
+                "limit" => 2000,
+              }
+            )
+            rej_data = rej["data"] || []
+            (rej["included"] || []).each { |r| rej_incl_by_id[r["id"]] = r }
+          rescue => e
+            UI.important("reviewRejections fetch for #{thread_id} failed (#{e.message}); skipping thread")
+          end
+
+          rej_data.each do |rr|
+            reasons = (rr.dig("attributes", "reasons") || [])
+                        .map { |r| { "section" => r["reasonSection"], "description" => r["reasonDescription"], "code" => r["reasonCode"] } }
+            next if reasons.empty?  # not a rejection (e.g. an approval conversation) — skip
+
+            ver_id = rr.dig("relationships", "appStoreVersion", "data", "id")
+            version = ver_id ? rej_incl_by_id.dig(ver_id, "attributes", "versionString") : nil
+
+            # The reviewer message that announced this rejection (its text + createdDate + attachments).
+            msg = msg_for_rej[rr["id"]]
+            created = (msg && msg.dig("attributes", "createdDate")) ||
+                      rr.dig("attributes", "createdDate") ||
+                      thread.dig("attributes", "createdDate")
+
+            messages = msg ? [{
+              "fromActor" => msg.dig("relationships", "fromActor", "data", "id"),
+              "createdDate" => msg.dig("attributes", "createdDate"),
+              "bodyHtml" => msg.dig("attributes", "messageBody"),
+            }] : []
+
+            # Attachments: this rejection's own + those on its reviewer message (deduped by id).
+            att_by_id = {}
+            (rr.dig("relationships", "rejectionAttachments", "data") || []).each do |a|
+              obj = rej_incl_by_id[a["id"]]; att_by_id[a["id"]] = obj if obj
+            end
+            if msg
+              (msg.dig("relationships", "resolutionCenterMessageAttachments", "data") || []).each do |a|
+                obj = msg_incl_by_id[a["id"]]; att_by_id[a["id"]] = obj if obj
+              end
+            end
+            attachments = attachment_refs(att_by_id.values)
+
+            rejections << {
+              "versionString" => version,
+              "submissionId" => s["id"],
+              "createdDate" => created,
+              "reasons" => reasons,
+              "messages" => messages,
+              "attachments" => attachments,
+            }
+          end
+        end
+      end
+
+      UI.user_error!("No rejections found across #{subs.size} submission(s)") if rejections.empty?
+      rejections.sort_by! { |r| r["createdDate"].to_s }  # oldest -> newest
+
+      post_rejection_callback(callback_url, secret, {
+        "status" => "success",
+        "appStoreId" => app_id,
+        "rejections" => rejections,
+      })
+      UI.success("Posted #{rejections.size} rejection(s)")
+    rescue => e
+      UI.important("fetch_rejection_details failed: #{e.message}")
+      begin
+        post_rejection_callback(callback_url, secret, {
+          "status" => "error", "appStoreId" => app_id, "error" => e.message,
+        })
+      rescue => post_err
+        UI.important("Failed to POST error callback too: #{post_err.message}")
+      end
+      raise
+    end
+  end
+end

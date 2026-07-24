@@ -1,0 +1,25 @@
+# Pushed by AppStoreMonitor to a dedicated branch of each app's repo (overwritten
+# every run). Pure Ruby/HTTP — no Xcode build — but mac_mini_m2 is the only
+# instance the Codemagic Free plan allows. Reads its inputs from the
+# "rejection_checker" env-var group, which AppStoreMonitor upserts before triggering.
+workflows:
+  check_rejection:
+    name: Check rejection details
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+
+    environment:
+      groups:
+        - "rejection_checker"
+
+    scripts:
+      - name: Install Ruby dependencies
+        script: |
+          bundle install
+
+      - name: Fetch Resolution Center rejection details
+        script: |
+          bundle exec fastlane ios fetch_rejection_details
+
+    artifacts:
+      - fastlane/logs/**/*
